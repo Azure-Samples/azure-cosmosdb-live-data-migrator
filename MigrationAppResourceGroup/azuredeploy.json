@@ -355,141 +355,141 @@
         "targetResourceUri": "[resourceId('Microsoft.Web/serverfarms', variables('serverfarms_MigrationServicePlan_name'))]"
       }
     },
-    {
-      "name": "[concat('CPUHigh ', variables('serverfarms_MigrationServicePlan_name'))]",
-      "type": "Microsoft.Insights/alertrules",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2014-04-01",
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/serverfarms', variables('serverfarms_MigrationServicePlan_name'))]"
-      ],
-      "tags": {
-        "[concat('hidden-link:', resourceId('Microsoft.Web/serverfarms', variables('serverfarms_MigrationServicePlan_name')))]": "Resource",
-        "displayName": "CPUHigh migrationInsights"
-      },
-      "properties": {
-        "name": "[concat('CPUHigh ', variables('serverfarms_MigrationServicePlan_name'))]",
-        "description": "[concat('The average CPU is high across all the instances of ', variables('serverfarms_MigrationServicePlan_name'))]",
-        "isEnabled": false,
-        "condition": {
-          "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
-          "dataSource": {
-            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
-            "resourceUri": "[resourceId('Microsoft.Web/serverfarms', variables('serverfarms_MigrationServicePlan_name'))]",
-            "metricName": "CpuPercentage"
-          },
-          "operator": "GreaterThan",
-          "threshold": 90,
-          "windowSize": "PT15M"
-        },
-        "action": {
-          "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
-          "sendToServiceOwners": true,
-          "customEmails": []
-        }
-      }
-    },
-    {
-      "name": "[concat('LongHttpQueue ', variables('serverfarms_MigrationServicePlan_name'))]",
-      "type": "Microsoft.Insights/alertrules",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2014-04-01",
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/serverfarms', variables('serverfarms_MigrationServicePlan_name'))]"
-      ],
-      "tags": {
-        "[concat('hidden-link:', resourceId('Microsoft.Web/serverfarms', variables('serverfarms_MigrationServicePlan_name')))]": "Resource",
-        "displayName": "LongHttpQueue migrationInsights"
-      },
-      "properties": {
-        "name": "[concat('LongHttpQueue ', variables('serverfarms_MigrationServicePlan_name'))]",
-        "description": "[concat('The HTTP queue for the instances of ', variables('serverfarms_MigrationServicePlan_name'), ' has a large number of pending requests.')]",
-        "isEnabled": false,
-        "condition": {
-          "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
-          "dataSource": {
-            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
-            "resourceUri": "[resourceId('Microsoft.Web/serverfarms', variables('serverfarms_MigrationServicePlan_name'))]",
-            "metricName": "HttpQueueLength"
-          },
-          "operator": "GreaterThan",
-          "threshold": 100,
-          "windowSize": "PT5M"
-        },
-        "action": {
-          "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
-          "sendToServiceOwners": true,
-          "customEmails": []
-        }
-      }
-    },
-    {
-      "name": "[concat('ServerErrors ', parameters('appinsightsname'))]",
-      "type": "Microsoft.Insights/alertrules",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2014-04-01",
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', parameters('appname'))]"
-      ],
-      "tags": {
-        "[concat('hidden-link:', resourceId('Microsoft.Web/sites', parameters('appname')))]": "Resource",
-        "displayName": "ServerErrors migrationInsights"
-      },
-      "properties": {
-        "name": "[concat('ServerErrors ', parameters('appname'))]",
-        "description": "[concat(parameters('appname'), ' has some server errors, status code 5xx.')]",
-        "isEnabled": false,
-        "condition": {
-          "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
-          "dataSource": {
-            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
-            "resourceUri": "[resourceId('Microsoft.Web/sites', parameters('appname'))]",
-            "metricName": "Http5xx"
-          },
-          "operator": "GreaterThan",
-          "threshold": 0,
-          "windowSize": "PT5M"
-        },
-        "action": {
-          "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
-          "sendToServiceOwners": true,
-          "customEmails": []
-        }
-      }
-    },
-    {
-      "name": "[concat('ForbiddenRequests ', parameters('appinsightsname'))]",
-      "type": "Microsoft.Insights/alertrules",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2014-04-01",
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', parameters('appname'))]"
-      ],
-      "tags": {
-        "displayName": "ForbiddenRequests migrationInsights"
-      },
-      "properties": {
-        "name": "[concat('ForbiddenRequests ', parameters('appname'))]",
-        "description": "[concat(parameters('appname'), ' has some requests that are forbidden, status code 403.')]",
-        "isEnabled": false,
-        "condition": {
-          "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
-          "dataSource": {
-            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
-            "resourceUri": "[resourceId('Microsoft.Web/sites', parameters('appname'))]",
-            "metricName": "Http403"
-          },
-          "operator": "GreaterThan",
-          "threshold": 0,
-          "windowSize": "PT5M"
-        },
-        "action": {
-          "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
-          "sendToServiceOwners": true,
-          "customEmails": []
-        }
-      }
-    },
+    //{
+    //  "name": "[concat('CPUHigh ', variables('serverfarms_MigrationServicePlan_name'))]",
+    //  "type": "Microsoft.Insights/alertrules",
+    //  "location": "[resourceGroup().location]",
+    //  "apiVersion": "2014-04-01",
+    //  "dependsOn": [
+    //    "[resourceId('Microsoft.Web/serverfarms', variables('serverfarms_MigrationServicePlan_name'))]"
+    //  ],
+    //  "tags": {
+    //    "[concat('hidden-link:', resourceId('Microsoft.Web/serverfarms', variables('serverfarms_MigrationServicePlan_name')))]": "Resource",
+    //    "displayName": "CPUHigh migrationInsights"
+    //  },
+    //  "properties": {
+    //    "name": "[concat('CPUHigh ', variables('serverfarms_MigrationServicePlan_name'))]",
+    //    "description": "[concat('The average CPU is high across all the instances of ', variables('serverfarms_MigrationServicePlan_name'))]",
+    //    "isEnabled": false,
+    //    "condition": {
+    //      "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+    //      "dataSource": {
+    //        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+    //        "resourceUri": "[resourceId('Microsoft.Web/serverfarms', variables('serverfarms_MigrationServicePlan_name'))]",
+    //        "metricName": "CpuPercentage"
+    //      },
+    //      "operator": "GreaterThan",
+    //      "threshold": 90,
+    //      "windowSize": "PT15M"
+    //    },
+    //    "action": {
+    //      "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+    //      "sendToServiceOwners": true,
+    //      "customEmails": []
+    //    }
+    //  }
+    //},
+    //{
+    //  "name": "[concat('LongHttpQueue ', variables('serverfarms_MigrationServicePlan_name'))]",
+    //  "type": "Microsoft.Insights/alertrules",
+    //  "location": "[resourceGroup().location]",
+    //  "apiVersion": "2014-04-01",
+    //  "dependsOn": [
+    //    "[resourceId('Microsoft.Web/serverfarms', variables('serverfarms_MigrationServicePlan_name'))]"
+    //  ],
+    //  "tags": {
+    //    "[concat('hidden-link:', resourceId('Microsoft.Web/serverfarms', variables('serverfarms_MigrationServicePlan_name')))]": "Resource",
+    //    "displayName": "LongHttpQueue migrationInsights"
+    //  },
+    //  "properties": {
+    //    "name": "[concat('LongHttpQueue ', variables('serverfarms_MigrationServicePlan_name'))]",
+    //    "description": "[concat('The HTTP queue for the instances of ', variables('serverfarms_MigrationServicePlan_name'), ' has a large number of pending requests.')]",
+    //    "isEnabled": false,
+    //    "condition": {
+    //      "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+    //      "dataSource": {
+    //        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+    //        "resourceUri": "[resourceId('Microsoft.Web/serverfarms', variables('serverfarms_MigrationServicePlan_name'))]",
+    //        "metricName": "HttpQueueLength"
+    //      },
+    //      "operator": "GreaterThan",
+    //      "threshold": 100,
+    //      "windowSize": "PT5M"
+    //    },
+    //    "action": {
+    //      "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+    //      "sendToServiceOwners": true,
+    //      "customEmails": []
+    //    }
+    //  }
+    //},
+    //{
+    //  "name": "[concat('ServerErrors ', parameters('appinsightsname'))]",
+    //  "type": "Microsoft.Insights/alertrules",
+    //  "location": "[resourceGroup().location]",
+    //  "apiVersion": "2014-04-01",
+    //  "dependsOn": [
+    //    "[resourceId('Microsoft.Web/sites', parameters('appname'))]"
+    //  ],
+    //  "tags": {
+    //    "[concat('hidden-link:', resourceId('Microsoft.Web/sites', parameters('appname')))]": "Resource",
+    //    "displayName": "ServerErrors migrationInsights"
+    //  },
+    //  "properties": {
+    //    "name": "[concat('ServerErrors ', parameters('appname'))]",
+    //    "description": "[concat(parameters('appname'), ' has some server errors, status code 5xx.')]",
+    //    "isEnabled": false,
+    //    "condition": {
+    //      "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+    //      "dataSource": {
+    //        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+    //        "resourceUri": "[resourceId('Microsoft.Web/sites', parameters('appname'))]",
+    //        "metricName": "Http5xx"
+    //      },
+    //      "operator": "GreaterThan",
+    //      "threshold": 0,
+    //      "windowSize": "PT5M"
+    //    },
+    //    "action": {
+    //      "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+    //      "sendToServiceOwners": true,
+    //      "customEmails": []
+    //    }
+    //  }
+    //},
+    //{
+    //  "name": "[concat('ForbiddenRequests ', parameters('appinsightsname'))]",
+    //  "type": "Microsoft.Insights/alertrules",
+    //  "location": "[resourceGroup().location]",
+    //  "apiVersion": "2014-04-01",
+    //  "dependsOn": [
+    //    "[resourceId('Microsoft.Web/sites', parameters('appname'))]"
+    //  ],
+    //  "tags": {
+    //    "displayName": "ForbiddenRequests migrationInsights"
+    //  },
+    //  "properties": {
+    //    "name": "[concat('ForbiddenRequests ', parameters('appname'))]",
+    //    "description": "[concat(parameters('appname'), ' has some requests that are forbidden, status code 403.')]",
+    //    "isEnabled": false,
+    //    "condition": {
+    //      "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+    //      "dataSource": {
+    //        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+    //        "resourceUri": "[resourceId('Microsoft.Web/sites', parameters('appname'))]",
+    //        "metricName": "Http403"
+    //      },
+    //      "operator": "GreaterThan",
+    //      "threshold": 0,
+    //      "windowSize": "PT5M"
+    //    },
+    //    "action": {
+    //      "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+    //      "sendToServiceOwners": true,
+    //      "customEmails": []
+    //    }
+    //  }
+    //},
     {
       "name": "[parameters('appinsightsname')]",
       "type": "Microsoft.Insights/components",

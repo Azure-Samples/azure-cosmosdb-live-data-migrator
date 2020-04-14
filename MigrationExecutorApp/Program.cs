@@ -20,12 +20,6 @@ namespace MigrationConsoleApp
     {
         public static TelemetryClient telemetryClient = new TelemetryClient();
 
-        //private static string endpoint = "https://nsr-global-poc.documents.azure.com:443/";
-        //private static string masterkey = "7OTp28bJTrJGwECoafnLmJy9fQP2aaMzWdSH79SiShhh5VpjynCqwwP6wJJ0Wl0uwgaq0alQS3gfYulMyFpk9Q==";
-        //private static string jobdb = "a";
-        //private static string jobColl = "a";
-        //private static string appInsightsInstrumentationKey = "32746a35-ca7f-4d34-babe-70675e5db5f9";
-
         private static string endpoint = ConfigurationManager.AppSettings["cosmosdbaccount"];
         private static string masterkey = ConfigurationManager.AppSettings["cosmosdbkey"];
         private static string jobdb = ConfigurationManager.AppSettings["cosmosdbdb"];
