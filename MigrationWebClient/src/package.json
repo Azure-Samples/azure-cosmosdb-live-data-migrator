@@ -19,7 +19,7 @@
     "express": "~4.14.0",
     "jade": "~1.11.0",
     "moment": "^2.22.2",
-    "morgan": "~1.7.0",
+    "morgan": "~1.10.0",
     "serve-favicon": "~2.3.0"
   },
   "engines": {
