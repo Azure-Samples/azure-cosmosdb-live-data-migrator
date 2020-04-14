@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "sites_migrationwebapp_name": {
+      "value": ""
+    },
+    "cosmosdbaccount": {
+      "value": ""
+    },
+    "cosmosdbkey": {
+      "value": ""
+    },
+    "cosmosdbdb": {
+      "value": ""
+    },
+    "cosmosdbcollection": {
+      "value": ""
+    },
+    "clientpackagelocation": {
+      "value": "https://nomiereastusdiag579.blob.core.windows.net/migrationservice/clientapp.zip"
+    },
+    "migrationjoblocation": {
+      "value": "https://nomiereastusdiag579.blob.core.windows.net/migrationservice/webjobs.zip"
+    },
+    "appinsightsname": {
+      "value": "migrationinsights"
+    }
+  }
+}

@@ -1,0 +1,18 @@
+doctype html
+html
+  head
+    title= title
+    link(rel='stylesheet', href='//ajax.aspnetcdn.com/ajax/bootstrap/3.3.2/css/bootstrap.min.css')
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    script(src='//ajax.aspnetcdn.com/ajax/jQuery/jquery-1.11.2.js')
+    script(src='//ajax.aspnetcdn.com/ajax/bootstrap/3.3.2/bootstrap.min.js')
+
+  body
+    nav.navbar.navbar-inverse.navbar-fixed-top
+      div.navbar-header
+        a.navbar-brand(href='#') Migrations
+    block content
+      h1= message
+      h2= error.status
+      pre #{error.stack}
+ 

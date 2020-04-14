@@ -1,0 +1,116 @@
+doctype html
+html
+  head
+    title= title
+    link(rel='stylesheet', href='//ajax.aspnetcdn.com/ajax/bootstrap/3.3.2/css/bootstrap.min.css')
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    script(src='//ajax.aspnetcdn.com/ajax/jQuery/jquery-1.11.2.js')
+    script(src='//ajax.aspnetcdn.com/ajax/bootstrap/3.3.2/bootstrap.min.js')
+
+  body
+    nav.navbar.navbar-inverse.navbar-fixed-top
+      div.navbar-header
+        a.navbar-brand(href='#') Migrations
+    block content
+    
+    h1 #{title} App
+    if (typeof migration === "undefined")
+      form.well(action="/addMigration", method="post")
+        .form-group
+          label(for="monitoredUri") Source Endpoint:
+          input.form-control(name="monitoredUri", type="textbox")
+        .form-group
+          label(for="monitoredSecretKey") Source Key:
+          input.form-control(name="monitoredSecretKey", type="textbox")
+        .form-group
+          label(for="monitoredDbName") Source DB Name:
+          input.form-control(name="monitoredDbName", type="textbox")
+        .form-group
+          label(for="monitoredCollectionName") Source Collection Name:
+          input.form-control(name="monitoredCollectionName", type="textbox")
+        .form-group
+          label(for="destUri") Destination Endpoint:
+          input.form-control(name="destUri", type="textbox")
+        .form-group
+          label(for="destSecretKey") Destination Key:
+          input.form-control(name="destSecretKey", type="textbox")
+        .form-group
+          label(for="destdestDbName") Destination DB:
+          input.form-control(name="destDbName", type="textbox")   
+        .form-group
+          label(for="destCollectionName") Destination Collection:
+          input.form-control(name="destCollectionName", type="textbox")
+        .form-group
+          label(for="leaseUri") Lease Uri:
+          input.form-control(name="leaseUri", type="textbox")
+        .form-group
+          label(for="leaseSecretKey") Lease Key:
+          input.form-control(name="leaseSecretKey", type="textbox")    
+        .form-group
+          label(for="leaseDbName") Lease Collection DB:
+          input.form-control(name="leaseDbName", type="textbox")
+        .form-group
+          label(for="leaseCollectionName") Lease Collection Name:
+          input.form-control(name="leaseCollectionName", type="textbox")
+        .form-group
+          label(for="dataAgeInHours") Maximum data age in hours (Optional) :
+          input.form-control(name="dataAgeInHours", type="textbox")  
+
+        br
+        button.btn(type="submit") Start Migration
+    else
+      form(action="/", method="get")
+        button.btn.btn-primary(type="submit") refresh
+
+      form(action="/completeMigration", method="post")
+        table.table.table-striped.table-bordered
+          tr
+            td Source Endpoint
+            td #{migration.monitoredUri}
+          tr 
+            td Source DB
+            td #{migration.monitoredDbName}
+          tr 
+            td Source Coll
+            td #{migration.monitoredCollectionName}
+          tr 
+            td Destination Uri
+            td #{migration.destUri}
+          tr 
+            td Destination DB
+            td #{migration.destDbName}
+          tr 
+            td Destination Coll
+            td #{migration.destCollectionName}
+          tr 
+            td Percentage Completed
+            td #{migration.percentageCompleted.toFixed(3)} %
+          tr 
+            td Elapsed Time
+            td #{migration.elapsedTime.toFixed(3)} hours
+          tr 
+            td Source count
+            td #{migration.sourceCollectionCount} docs 
+          tr 
+            td Destination count
+            td #{migration.destinationCollectionCount} docs    
+          tr 
+            td Eta
+            td #{migration.eta.toFixed(3)} hours
+          tr 
+            td Average insert rate
+            td #{migration.averageInsertRate.toFixed(3)} docs/sec     
+          tr 
+            td current insert rate
+            td #{migration.currentInsertRate.toFixed(3)} docs/sec    
+          tr 
+            td Complete
+            td #{migration.completed || false}         
+
+        br    
+        button.btn.btn-primary(type="submit") Complete Migration
+
+      form(action="/reverseMigration", method="post")
+        button.btn.btn-primary(type="submit") Reverse Migration
+       
+
