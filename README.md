@@ -19,8 +19,6 @@ The Cosmos DB Live Data Migrator provides the following features:
 - Uses bulk executor to write to the target container
 - Uses ARM template to deploy the resources
 - Uses App Service compute with P3v2 SKU in PremiumV2 Tier. The default number of instances is 5 and can be scaled up or down. 
-- More details to be Added
-
 
 
 ### Quickstart
@@ -48,7 +46,7 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 - Add the Source and Target Cosmos DB connection details 
 
-- Add the Cosmos DB connection details for Lease DB, which is used in the ChangeFeed process. Name the PK column as "id".
+- Add the Cosmos DB connection details for Lease DB, which is used in the ChangeFeed process. 
 
 - [Optional] Add the Azure Blob Connection string and Container Name to store the failed / bad records. The complete records would be stored in this Container and can be used for point inserts.
 
@@ -61,7 +59,7 @@ The Cosmos DB Live Data Migrator provides the following features:
 	![Monitoring](images/monitoring.png)
 
 - Click on Complete Migration once all the documents have been migrated to Target container
--
+
 - The number of workers in the webapp service can be scaled up or down while the migration is in progress as shown below. The default is five workers.
 
 	![Scaling](images/scaling.png)
@@ -71,11 +69,11 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 
 ### Failed / Bad Documents
-- To be added 
+- TBA 
 
 
 ### Querying App Insights metrics
-- To be added
+- TBA
 
 
 
