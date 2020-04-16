@@ -3,27 +3,21 @@
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
-    using System.Threading;
+    using System.IO;
     using System.Linq;
+    using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
+    using Azure.Storage.Blobs;
     using Microsoft.Azure.CosmosDB.BulkExecutor;
     using Microsoft.Azure.CosmosDB.BulkExecutor.BulkImport;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.ChangeFeedProcessor;
     using Microsoft.Azure.Documents.ChangeFeedProcessor.FeedProcessing;
     using Microsoft.Azure.Documents.Client;
+    using Newtonsoft.Json;
     using ChangeFeedObserverCloseReason = Microsoft.Azure.Documents.ChangeFeedProcessor.FeedProcessing.ChangeFeedObserverCloseReason;
     using IChangeFeedObserver = Microsoft.Azure.Documents.ChangeFeedProcessor.FeedProcessing.IChangeFeedObserver;
-    using Azure.Storage.Blobs;
-    using Azure.Storage.Blobs.Specialized;
-
-    using Azure.Storage.Blobs.Models;
-    using System.IO;
-    using System.Runtime.CompilerServices;
-    using System.Text;
-    using MongoDB.Bson;
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
 
     public class DocumentFeedObserver: IChangeFeedObserver
     {
@@ -33,6 +27,9 @@
         private IDocumentTransformer documentTransformer;
         //private AppendBlobClient appendBlobClient;
         private BlobContainerClient containerClient;
+        string targetPartitionKey = Environment.GetEnvironmentVariable($"{"TargetPartitionKey"}");
+        static readonly string sourcePartitionKeys = Environment.GetEnvironmentVariable($"{"SourcePartitionKeys"}");
+        Boolean isSyntheticKey;
 
         public DocumentFeedObserver(DocumentClient client, DocumentCollectionInfo destCollInfo, IDocumentTransformer documentTransformer, BlobContainerClient containerClient)
         {
@@ -40,6 +37,10 @@
             this.destinationCollectionUri = UriFactory.CreateDocumentCollectionUri(destCollInfo.DatabaseName, destCollInfo.CollectionName);
             this.documentTransformer = documentTransformer;
             this.containerClient = containerClient;
+            if(sourcePartitionKeys != null)
+            {
+                this.isSyntheticKey = sourcePartitionKeys.IndexOf(",") == -1 ? false : true;
+            }            
         }
 
         public async Task OpenAsync(IChangeFeedObserverContext context)
@@ -76,10 +77,13 @@
             BulkImportResponse bulkImportResponse = new BulkImportResponse();
             try
             {
+                
                 List<Document> transformedDocs = new List<Document>();
-                foreach(var doc in docs)
+                Document document = new Document();
+                foreach (var doc in docs)
                 {
-                    transformedDocs.AddRange(documentTransformer.TransformDocument(doc).Result);
+                    document = (sourcePartitionKeys != null & targetPartitionKey != null) ? MapPartitionKey(doc) : document = doc;
+                    transformedDocs.AddRange(documentTransformer.TransformDocument(document).Result);
                 }
 
                 bulkImportResponse = await bulkExecutor.BulkImportAsync(
@@ -161,6 +165,41 @@
                 //    + bulkImportResponse.FailedImports.First().BulkImportFailureException.Message + " = " + bulkImportResponse.FailedImports.First().DocumentsFailedToImport.Count
                 //    + ". The failed import docs are: " + failedImportDocs);
             }
+        }
+
+        public Document MapPartitionKey(Document doc)
+        {            
+            if (isSyntheticKey)
+            {
+                doc = CreateSyntheticKey(doc);
+            }
+            else
+            {
+                doc.SetPropertyValue(targetPartitionKey, doc.GetPropertyValue<string>(sourcePartitionKeys));
+            }
+            return doc;
+        }
+
+        public Document CreateSyntheticKey(Document doc)
+        {
+            StringBuilder syntheticKey = new StringBuilder();
+            string[] sourceAttributeArray = sourcePartitionKeys.Split(',');
+            int arraylength = sourceAttributeArray.Length;
+            int count = 1;
+            foreach (string attribute in sourceAttributeArray)
+            {
+                if (count == arraylength)
+                {
+                    syntheticKey.Append(doc.GetPropertyValue<string>(attribute));
+                }
+                else
+                {
+                    syntheticKey.Append(doc.GetPropertyValue<string>(attribute) + "-");
+                }
+                count++;
+            }
+            doc.SetPropertyValue(targetPartitionKey, syntheticKey.ToString());
+            return doc;
         }
     }
 }

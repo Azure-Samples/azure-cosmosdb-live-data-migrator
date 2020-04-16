@@ -1,14 +1,15 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MigrationConsoleApp
 {
     public class MigrationConfig
     {
+        [JsonProperty("sourcePartitionKeys")]
+        public string SourcePartitionKeys { get; set; }
+
+        [JsonProperty("targetPartitionKey")]
+        public string TargetPartitionKey { get; set; }
+
         [JsonProperty("monitoredUri")]
         public string MonitoredUri { get; set; }
 

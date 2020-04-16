@@ -51,6 +51,8 @@ The Cosmos DB Live Data Migrator provides the following features:
 - [Optional] Add the Azure Blob Connection string and Container Name to store the failed / bad records. The complete records would be stored in this Container and can be used for point inserts.
 
 - [Optional] Maximum data age in hours is used to derive the starting point of time to read from source container. In other words, it starts looking for changes after [currenttime - given number of hours] in source. The data migration starts from beginning if this parameter is not specified.
+
+- [Optional] The "Source Partition Key Attribute(s)" and "Target Partition Key" fields are used for mapping a dedicated partition key field. For example, if you have a target partition key named "partitionKey", and this is populated from "deviceId", you should enter "deviceId" in "Source Partition Key Attribute(s)". You can also add multiple fields separated by a comma to map a synthetic key, e.g. "deviceId,timestamp". These will be separated with a dash, e.g. "deviceId-timestamp". Nested attributes are not supported. If no mapping is required as there is no dedicated partition key field, you can simply leave these fields blank. 
  
 ![Migrationdetails](images/migrationdetails.png)
 

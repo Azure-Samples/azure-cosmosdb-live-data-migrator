@@ -17,6 +17,12 @@ html
     if (typeof migration === "undefined")
       form.well(action="/addMigration", method="post")
         .form-group
+          label(for="sourcePartitionKeys") Source Partition Key Attribute(s):
+          input.form-control(name="sourcePartitionKeys", type="textbox")
+        .form-group
+          label(for="targetPartitionKey") Target Partition Key Attribute:
+          input.form-control(name="targetPartitionKey", type="textbox")
+        .form-group
           label(for="monitoredUri") Source Endpoint:
           input.form-control(name="monitoredUri", type="textbox")
         .form-group
@@ -64,6 +70,12 @@ html
 
       form(action="/completeMigration", method="post")
         table.table.table-striped.table-bordered
+          tr
+            td Source Partition Key Attribute(s)
+            td #{migration.sourcePartitionKeys}
+          tr
+            td Target Partition Key
+            td #{migration.targetPartitionKey}
           tr
             td Source Endpoint
             td #{migration.monitoredUri}

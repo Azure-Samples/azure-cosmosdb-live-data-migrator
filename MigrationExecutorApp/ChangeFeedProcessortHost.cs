@@ -1,17 +1,13 @@
 ﻿namespace MigrationConsoleApp
 {
     using System;
-    using System.Collections.Generic;
-    using System.Configuration;
     using System.Diagnostics;
     using System.Threading.Tasks;
+    using Azure.Storage.Blobs;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.ChangeFeedProcessor;
     using Microsoft.Azure.Documents.ChangeFeedProcessor.PartitionManagement;
     using Microsoft.Azure.Documents.Client;
-    using Azure.Storage.Blobs;
-    using Azure.Storage.Blobs.Specialized;
-    using Microsoft.Azure.Documents.SystemFunctions;
 
     public class ChangeFeedProcessorHost
     {
@@ -35,6 +31,8 @@
         public ChangeFeedProcessorHost(MigrationConfig config)
         {
             this.config = config;
+            Environment.SetEnvironmentVariable("SourcePartitionKeys", config.SourcePartitionKeys);
+            Environment.SetEnvironmentVariable("TargetPartitionKey", config.TargetPartitionKey);
         }
 
         public async Task StartAsync()
