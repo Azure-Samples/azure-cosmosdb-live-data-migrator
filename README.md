@@ -52,7 +52,22 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 - [Optional] Maximum data age in hours is used to derive the starting point of time to read from source container. In other words, it starts looking for changes after [currenttime - given number of hours] in source. The data migration starts from beginning if this parameter is not specified.
 
-- [Optional] The "Source Partition Key Attribute(s)" and "Target Partition Key" fields are used for mapping a dedicated or synthetic partition key attribute in your target collection. For example, if you want to have a dedicated or synthetic partition key in your new collection named "partitionKey", and this will be populated from "deviceId", you should enter "deviceId" in "Source Partition Key Attribute(s)" field, and "partitionKey" in the "Target Partition Key" field. You can also add multiple fields separated by a comma to map a synthetic key, e.g. add "deviceId,timestamp" in the "Source Partition Key Attribute(s)" field. These will be separated with a dash, e.g. "deviceId-timestamp". Mapping to, or from, nested fields is not supported. If no mapping is required, as there is no dedicated partition key field in your target collection, you can leave these fields blank.
+- [Optional] The "Source Partition Key Attribute(s)" and "Target Partition Key" fields are used for mapping partition key attributes from your source collection to your target collection. For example, if you want to have a dedicated or synthetic partition key in your new collection named "partitionKey", and this will be populated from "deviceId", you should enter `deviceId` in "Source Partition Key Attribute(s)" field, and `partitionKey` in the "Target Partition Key" field. You can also add multiple fields separated by a comma to map a synthetic key, e.g. add `deviceId,timestamp` in the "Source Partition Key Attribute(s)" field. Nested source fields are also supported, for example `Parent1/Child1,Parent2/Child2`. If you want to select an item in an array, for example:
+
+	```json
+		{
+			"id": "1",
+			"parent": [
+				{
+					"child": "value1"
+				},
+				{
+					"child": "value2"
+				}
+			]
+		}
+	```
+	You can use xpath syntax, e.g. `parent/item[1]/child`. In all cases of synthetic partition key mapping, these will be separated with a dash when mapped to the target collection, e.g. `value1-value2`. If no mapping is required, as there is no dedicated partition key field in your source or target collection, you can leave these fields blank.
  
 ![Migrationdetails](images/migrationdetails.png)
 
@@ -60,7 +75,7 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 	![Monitoring](images/monitoring.png)
 
-- Click on Complete Migration once all the documents have been migrated to Target container
+- Click on Complete Migration once all the documents have been migrated to Target container. If you are doing a live migration for the purpose of changing partition key, you should not complete the migration until you have made any required changes in your client code based on the new partition key scheme. 
 
 - The number of workers in the webapp service can be scaled up or down while the migration is in progress as shown below. The default is five workers.
 

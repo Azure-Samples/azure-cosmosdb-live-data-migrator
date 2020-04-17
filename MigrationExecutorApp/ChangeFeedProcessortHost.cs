@@ -31,8 +31,6 @@
         public ChangeFeedProcessorHost(MigrationConfig config)
         {
             this.config = config;
-            Environment.SetEnvironmentVariable("SourcePartitionKeys", config.SourcePartitionKeys);
-            Environment.SetEnvironmentVariable("TargetPartitionKey", config.TargetPartitionKey);
         }
 
         public async Task StartAsync()
@@ -182,13 +180,8 @@
 
             if (!String.IsNullOrEmpty(config.BlobConnectionString))
             {
-
-                Console.WriteLine("blobConnectionString: " + this.config.BlobConnectionString);
-                Console.WriteLine("blobContainerName: " + this.config.BlobContainerName);
-
                 BlobServiceClient blobServiceClient = new BlobServiceClient(config.BlobConnectionString);
                 containerClient = blobServiceClient.GetBlobContainerClient(config.BlobContainerName);
-
                 await containerClient.CreateIfNotExistsAsync();
             } 
             
@@ -196,7 +189,7 @@
             //AppendBlobClient appendBlobClient = new AppendBlobClient("DefaultEndpointsProtocol=https;AccountName=revin;AccountKey=rmN8Esbnyal8q0keILZWx2XdXZpmTHXOVs0lNIigs/nhK25J25zWHWPxDik7LZ2mqIEolJclHPgyEtBOfa4NfA==;EndpointSuffix=core.windows.net", "cosmosdb-live-etl", "FailedImportDocs.csv");
             //appendBlobClient.AppendBlockAsync("hello");
 
-            var docObserverFactory = new DocumentFeedObserverFactory(destClient, destCollInfo, docTransformer, containerClient);
+            var docObserverFactory = new DocumentFeedObserverFactory(config, destClient, destCollInfo, docTransformer, containerClient);
 
             changeFeedProcessor = await new ChangeFeedProcessorBuilder()
                 .WithObserverFactory(docObserverFactory)

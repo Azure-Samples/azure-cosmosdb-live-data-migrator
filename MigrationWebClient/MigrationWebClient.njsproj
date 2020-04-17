@@ -33,7 +33,6 @@
     <None Include="clientapp.pubxml" />
     <Content Include="README.md" />
     <Content Include="src\.DS_Store" />
-    <Content Include="src\package-lock.json" />
     <Content Include="src\package.json" />
     <Content Include="src\public\stylesheets\style.css" />
     <Content Include="src\views\error.jade" />

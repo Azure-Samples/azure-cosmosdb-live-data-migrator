@@ -5,9 +5,12 @@
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
+    using System.Runtime.Serialization.Json;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
+    using System.Xml.Linq;
+    using System.Xml.XPath;
     using Azure.Storage.Blobs;
     using Microsoft.Azure.CosmosDB.BulkExecutor;
     using Microsoft.Azure.CosmosDB.BulkExecutor.BulkImport;
@@ -22,25 +25,21 @@
     public class DocumentFeedObserver: IChangeFeedObserver
     {
         private readonly DocumentClient client;
+        private readonly MigrationConfig config;
         private readonly Uri destinationCollectionUri;
         private IBulkExecutor bulkExecutor;
         private IDocumentTransformer documentTransformer;
         //private AppendBlobClient appendBlobClient;
         private BlobContainerClient containerClient;
-        string targetPartitionKey = Environment.GetEnvironmentVariable($"{"TargetPartitionKey"}");
-        static readonly string sourcePartitionKeys = Environment.GetEnvironmentVariable($"{"SourcePartitionKeys"}");
-        Boolean isSyntheticKey;
 
-        public DocumentFeedObserver(DocumentClient client, DocumentCollectionInfo destCollInfo, IDocumentTransformer documentTransformer, BlobContainerClient containerClient)
+
+        public DocumentFeedObserver(MigrationConfig config, DocumentClient client, DocumentCollectionInfo destCollInfo, IDocumentTransformer documentTransformer, BlobContainerClient containerClient)
         {
+            this.config = config;
             this.client = client;
             this.destinationCollectionUri = UriFactory.CreateDocumentCollectionUri(destCollInfo.DatabaseName, destCollInfo.CollectionName);
             this.documentTransformer = documentTransformer;
-            this.containerClient = containerClient;
-            if(sourcePartitionKeys != null)
-            {
-                this.isSyntheticKey = sourcePartitionKeys.IndexOf(",") == -1 ? false : true;
-            }            
+            this.containerClient = containerClient;  
         }
 
         public async Task OpenAsync(IChangeFeedObserverContext context)
@@ -77,12 +76,16 @@
             BulkImportResponse bulkImportResponse = new BulkImportResponse();
             try
             {
-                
+                string targetPartitionKey = config.TargetPartitionKey;
+                string sourcePartitionKeys = config.SourcePartitionKeys;
+                Boolean isSyntheticKey = sourcePartitionKeys.Contains(",");
+                Boolean isNestedAttribute = sourcePartitionKeys.Contains("/");
+
                 List<Document> transformedDocs = new List<Document>();
                 Document document = new Document();
                 foreach (var doc in docs)
                 {
-                    document = (sourcePartitionKeys != null & targetPartitionKey != null) ? MapPartitionKey(doc) : document = doc;
+                    document = (sourcePartitionKeys != null & targetPartitionKey != null) ? MapPartitionKey(doc, isSyntheticKey, targetPartitionKey, isNestedAttribute, sourcePartitionKeys) : document = doc;
                     transformedDocs.AddRange(documentTransformer.TransformDocument(document).Result);
                 }
 
@@ -167,20 +170,20 @@
             }
         }
 
-        public Document MapPartitionKey(Document doc)
+        public static Document MapPartitionKey(Document doc, Boolean isSyntheticKey, string targetPartitionKey, Boolean isNestedAttribute, string sourcePartitionKeys)
         {            
             if (isSyntheticKey)
             {
-                doc = CreateSyntheticKey(doc);
+                doc = CreateSyntheticKey(doc, sourcePartitionKeys, isNestedAttribute, targetPartitionKey);
             }
             else
             {
-                doc.SetPropertyValue(targetPartitionKey, doc.GetPropertyValue<string>(sourcePartitionKeys));
+                doc.SetPropertyValue(targetPartitionKey, isNestedAttribute == true ? GetNestedValue(doc, sourcePartitionKeys): doc.GetPropertyValue<string>(sourcePartitionKeys));      
             }
             return doc;
         }
 
-        public Document CreateSyntheticKey(Document doc)
+        public static Document CreateSyntheticKey(Document doc, string sourcePartitionKeys, Boolean isNestedAttribute, string targetPartitionKey)
         {
             StringBuilder syntheticKey = new StringBuilder();
             string[] sourceAttributeArray = sourcePartitionKeys.Split(',');
@@ -190,16 +193,26 @@
             {
                 if (count == arraylength)
                 {
-                    syntheticKey.Append(doc.GetPropertyValue<string>(attribute));
+                    string val = isNestedAttribute == true ? GetNestedValue(doc, attribute) : doc.GetPropertyValue<string>(attribute);
+                    syntheticKey.Append(val);
                 }
                 else
                 {
-                    syntheticKey.Append(doc.GetPropertyValue<string>(attribute) + "-");
+                    string val = isNestedAttribute == true ? GetNestedValue(doc, attribute) + "-" : doc.GetPropertyValue<string>(attribute) + "-";
+                    syntheticKey.Append(val);
                 }
                 count++;
             }
             doc.SetPropertyValue(targetPartitionKey, syntheticKey.ToString());
             return doc;
+        }
+
+        public static string GetNestedValue (Document doc, string path)
+        {
+            var jsonReader = JsonReaderWriterFactory.CreateJsonReader(Encoding.UTF8.GetBytes(doc.ToString()), new System.Xml.XmlDictionaryReaderQuotas());
+            var root = XElement.Load(jsonReader);
+            string value = root.XPathSelectElement("//"+path).Value;
+            return value;
         }
     }
 }
