@@ -9,6 +9,8 @@
     public class DocumentFeedObserverFactory: IChangeFeedObserverFactory
     {
         private DocumentClient destClient;
+        private readonly string SourcePartitionKeys;
+        private readonly string TargetPartitionKey;
         private MigrationConfig config;
         private DocumentCollectionInfo destCollInfo;
         private IDocumentTransformer documentTransformer;
@@ -22,18 +24,19 @@
         /// <param name="destClient">Client connected to destination collection</param>
         /// <param name="destCollInfo">Destination collection information</param>
         /// /// <param name="docTransformer">Destination collection information</param>
-        public DocumentFeedObserverFactory(MigrationConfig config, DocumentClient destClient, DocumentCollectionInfo destCollInfo, IDocumentTransformer docTransformer, BlobContainerClient containerClient)
+        public DocumentFeedObserverFactory(string SourcePartitionKeys, string TargetPartitionKey, DocumentClient destClient, DocumentCollectionInfo destCollInfo, IDocumentTransformer docTransformer, BlobContainerClient containerClient)
         {
-            this.config = config;
             this.destCollInfo = destCollInfo;
             this.destClient = destClient;
             this.documentTransformer = docTransformer;
             this.containerClient = containerClient;
+            this.SourcePartitionKeys = SourcePartitionKeys;
+            this.TargetPartitionKey = TargetPartitionKey;
         }
 
         public IChangeFeedObserver CreateObserver()
         {
-            DocumentFeedObserver newObserver = new DocumentFeedObserver(this.config, this.destClient, this.destCollInfo, this.documentTransformer, this.containerClient);
+            DocumentFeedObserver newObserver = new DocumentFeedObserver(SourcePartitionKeys, TargetPartitionKey, this.destClient, this.destCollInfo, this.documentTransformer, this.containerClient);
             return newObserver;
         }
     }

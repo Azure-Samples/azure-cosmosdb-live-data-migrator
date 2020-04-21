@@ -25,17 +25,19 @@
     public class DocumentFeedObserver: IChangeFeedObserver
     {
         private readonly DocumentClient client;
-        private readonly MigrationConfig config;
         private readonly Uri destinationCollectionUri;
         private IBulkExecutor bulkExecutor;
         private IDocumentTransformer documentTransformer;
         //private AppendBlobClient appendBlobClient;
         private BlobContainerClient containerClient;
+        private readonly string SourcePartitionKeys;
+        private readonly string TargetPartitionKey;
 
 
-        public DocumentFeedObserver(MigrationConfig config, DocumentClient client, DocumentCollectionInfo destCollInfo, IDocumentTransformer documentTransformer, BlobContainerClient containerClient)
+        public DocumentFeedObserver(string SourcePartitionKeys, string TargetPartitionKey, DocumentClient client, DocumentCollectionInfo destCollInfo, IDocumentTransformer documentTransformer, BlobContainerClient containerClient)
         {
-            this.config = config;
+            this.SourcePartitionKeys = SourcePartitionKeys;
+            this.TargetPartitionKey = TargetPartitionKey;
             this.client = client;
             this.destinationCollectionUri = UriFactory.CreateDocumentCollectionUri(destCollInfo.DatabaseName, destCollInfo.CollectionName);
             this.documentTransformer = documentTransformer;
@@ -76,16 +78,16 @@
             BulkImportResponse bulkImportResponse = new BulkImportResponse();
             try
             {
-                string targetPartitionKey = config.TargetPartitionKey;
-                string sourcePartitionKeys = config.SourcePartitionKeys;
-                Boolean isSyntheticKey = sourcePartitionKeys.Contains(",");
-                Boolean isNestedAttribute = sourcePartitionKeys.Contains("/");
+                //string targetPartitionKey = TargetPartitionKey;
+                //string sourcePartitionKeys = SourcePartitionKeys;
+                Boolean isSyntheticKey = SourcePartitionKeys.Contains(",");
+                Boolean isNestedAttribute = SourcePartitionKeys.Contains("/");
 
                 List<Document> transformedDocs = new List<Document>();
                 Document document = new Document();
                 foreach (var doc in docs)
                 {
-                    document = (sourcePartitionKeys != null & targetPartitionKey != null) ? MapPartitionKey(doc, isSyntheticKey, targetPartitionKey, isNestedAttribute, sourcePartitionKeys) : document = doc;
+                    document = (SourcePartitionKeys != null & TargetPartitionKey != null) ? MapPartitionKey(doc, isSyntheticKey, TargetPartitionKey, isNestedAttribute, SourcePartitionKeys) : document = doc;
                     transformedDocs.AddRange(documentTransformer.TransformDocument(document).Result);
                 }
 
@@ -189,8 +191,9 @@
             string[] sourceAttributeArray = sourcePartitionKeys.Split(',');
             int arraylength = sourceAttributeArray.Length;
             int count = 1;
-            foreach (string attribute in sourceAttributeArray)
+            foreach (string rawattribute in sourceAttributeArray)
             {
+                string attribute = rawattribute.Trim();
                 if (count == arraylength)
                 {
                     string val = isNestedAttribute == true ? GetNestedValue(doc, attribute) : doc.GetPropertyValue<string>(attribute);
