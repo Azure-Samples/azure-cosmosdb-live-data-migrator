@@ -24,13 +24,19 @@ The Cosmos DB Live Data Migrator provides the following features:
 ### Quickstart
 
 - Sign in to the Azure portal and select Create a resource option
-- Find Template deployment (deploy using custom templates) and choose Buld your own template as below. 
+
+    ![Templatedeployment](images/createresource.png)
+
+- Find Template deployment (deploy using custom templates) and choose Build your own template as below. 
 	
-	![Templatedeployment](images/templatedeployment.png)
-	![Templatedeploymentcreate](images/templatedeploymentcreate.png)
-	![Templatedeploymentbuild](images/templatedeploymentbuild.png)
+	![Templatedeployment](images/searchdeploytemplate.png)
+	![Templatedeploymentcreate](images/buildyourowntemplate.png)
+
 
 - Copy the contents of [deployment template](MigrationAppResourceGroup/azuredeploy.json) and click Save.
+
+	![Templatedeployment](images/edittemplate.png)
+
 
 - It may be a good practice to create a new Resource group so that it is easy to co-locate the different components of Service. Please make sure that the Resource group Region is same as the Region of Cosmos DB Source and Target collections.
 
@@ -39,7 +45,8 @@ The Cosmos DB Live Data Migrator provides the following features:
 - The cosmos db Account information is to store the migration metadata and migration state. Please note that this is not the Source and Target Cosmos DB details and that will need to be entered at a later stage.
 
 - The Clientpackagelocation and Migrationjoblocation are pre-populated with the zipped files to be published
-	![Templateparams](images/templateparams.png)
+
+	![Templateparams](images/customdeployment.png)
 
 - Open the webapp client resource and click on the URL (it will be of the format: https://appnameclient.azurewebsites.net)
 	![Webappclient](images/webappclient.png)
