@@ -13,8 +13,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>80cd0f27-9b65-4bc2-a16a-f660e416b222</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>
-    </StartupFile>
+    <StartupFile>src\app.js</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -34,7 +33,6 @@
     <None Include="clientapp.pubxml" />
     <Content Include="README.md" />
     <Content Include="src\.DS_Store" />
-    <Content Include="src\package-lock.json" />
     <Content Include="src\package.json" />
     <Content Include="src\public\stylesheets\style.css" />
     <Content Include="src\views\error.jade" />

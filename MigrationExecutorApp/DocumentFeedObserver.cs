@@ -3,27 +3,24 @@
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
-    using System.Threading;
+    using System.IO;
     using System.Linq;
+    using System.Runtime.Serialization.Json;
+    using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
+    using System.Xml.Linq;
+    using System.Xml.XPath;
+    using Azure.Storage.Blobs;
     using Microsoft.Azure.CosmosDB.BulkExecutor;
     using Microsoft.Azure.CosmosDB.BulkExecutor.BulkImport;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.ChangeFeedProcessor;
     using Microsoft.Azure.Documents.ChangeFeedProcessor.FeedProcessing;
     using Microsoft.Azure.Documents.Client;
+    using Newtonsoft.Json;
     using ChangeFeedObserverCloseReason = Microsoft.Azure.Documents.ChangeFeedProcessor.FeedProcessing.ChangeFeedObserverCloseReason;
     using IChangeFeedObserver = Microsoft.Azure.Documents.ChangeFeedProcessor.FeedProcessing.IChangeFeedObserver;
-    using Azure.Storage.Blobs;
-    using Azure.Storage.Blobs.Specialized;
-
-    using Azure.Storage.Blobs.Models;
-    using System.IO;
-    using System.Runtime.CompilerServices;
-    using System.Text;
-    using MongoDB.Bson;
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
 
     public class DocumentFeedObserver: IChangeFeedObserver
     {
@@ -33,13 +30,18 @@
         private IDocumentTransformer documentTransformer;
         //private AppendBlobClient appendBlobClient;
         private BlobContainerClient containerClient;
+        private readonly string SourcePartitionKeys;
+        private readonly string TargetPartitionKey;
 
-        public DocumentFeedObserver(DocumentClient client, DocumentCollectionInfo destCollInfo, IDocumentTransformer documentTransformer, BlobContainerClient containerClient)
+
+        public DocumentFeedObserver(string SourcePartitionKeys, string TargetPartitionKey, DocumentClient client, DocumentCollectionInfo destCollInfo, IDocumentTransformer documentTransformer, BlobContainerClient containerClient)
         {
+            this.SourcePartitionKeys = SourcePartitionKeys;
+            this.TargetPartitionKey = TargetPartitionKey;
             this.client = client;
             this.destinationCollectionUri = UriFactory.CreateDocumentCollectionUri(destCollInfo.DatabaseName, destCollInfo.CollectionName);
             this.documentTransformer = documentTransformer;
-            this.containerClient = containerClient;
+            this.containerClient = containerClient;  
         }
 
         public async Task OpenAsync(IChangeFeedObserverContext context)
@@ -76,10 +78,15 @@
             BulkImportResponse bulkImportResponse = new BulkImportResponse();
             try
             {
+                Boolean isSyntheticKey = SourcePartitionKeys.Contains(",");
+                Boolean isNestedAttribute = SourcePartitionKeys.Contains("/");
+
                 List<Document> transformedDocs = new List<Document>();
-                foreach(var doc in docs)
+                Document document = new Document();
+                foreach (var doc in docs)
                 {
-                    transformedDocs.AddRange(documentTransformer.TransformDocument(doc).Result);
+                    document = (SourcePartitionKeys != null & TargetPartitionKey != null) ? MapPartitionKey(doc, isSyntheticKey, TargetPartitionKey, isNestedAttribute, SourcePartitionKeys) : document = doc;
+                    transformedDocs.AddRange(documentTransformer.TransformDocument(document).Result);
                 }
 
                 bulkImportResponse = await bulkExecutor.BulkImportAsync(
@@ -161,6 +168,52 @@
                 //    + bulkImportResponse.FailedImports.First().BulkImportFailureException.Message + " = " + bulkImportResponse.FailedImports.First().DocumentsFailedToImport.Count
                 //    + ". The failed import docs are: " + failedImportDocs);
             }
+        }
+
+        public static Document MapPartitionKey(Document doc, Boolean isSyntheticKey, string targetPartitionKey, Boolean isNestedAttribute, string sourcePartitionKeys)
+        {            
+            if (isSyntheticKey)
+            {
+                doc = CreateSyntheticKey(doc, sourcePartitionKeys, isNestedAttribute, targetPartitionKey);
+            }
+            else
+            {
+                doc.SetPropertyValue(targetPartitionKey, isNestedAttribute == true ? GetNestedValue(doc, sourcePartitionKeys): doc.GetPropertyValue<string>(sourcePartitionKeys));      
+            }
+            return doc;
+        }
+
+        public static Document CreateSyntheticKey(Document doc, string sourcePartitionKeys, Boolean isNestedAttribute, string targetPartitionKey)
+        {
+            StringBuilder syntheticKey = new StringBuilder();
+            string[] sourceAttributeArray = sourcePartitionKeys.Split(',');
+            int arraylength = sourceAttributeArray.Length;
+            int count = 1;
+            foreach (string rawattribute in sourceAttributeArray)
+            {
+                string attribute = rawattribute.Trim();
+                if (count == arraylength)
+                {
+                    string val = isNestedAttribute == true ? GetNestedValue(doc, attribute) : doc.GetPropertyValue<string>(attribute);
+                    syntheticKey.Append(val);
+                }
+                else
+                {
+                    string val = isNestedAttribute == true ? GetNestedValue(doc, attribute) + "-" : doc.GetPropertyValue<string>(attribute) + "-";
+                    syntheticKey.Append(val);
+                }
+                count++;
+            }
+            doc.SetPropertyValue(targetPartitionKey, syntheticKey.ToString());
+            return doc;
+        }
+
+        public static string GetNestedValue (Document doc, string path)
+        {
+            var jsonReader = JsonReaderWriterFactory.CreateJsonReader(Encoding.UTF8.GetBytes(doc.ToString()), new System.Xml.XmlDictionaryReaderQuotas());
+            var root = XElement.Load(jsonReader);
+            string value = root.XPathSelectElement("//"+path).Value;
+            return value;
         }
     }
 }

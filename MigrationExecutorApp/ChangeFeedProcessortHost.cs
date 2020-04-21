@@ -1,17 +1,13 @@
 ﻿namespace MigrationConsoleApp
 {
     using System;
-    using System.Collections.Generic;
-    using System.Configuration;
     using System.Diagnostics;
     using System.Threading.Tasks;
+    using Azure.Storage.Blobs;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.ChangeFeedProcessor;
     using Microsoft.Azure.Documents.ChangeFeedProcessor.PartitionManagement;
     using Microsoft.Azure.Documents.Client;
-    using Azure.Storage.Blobs;
-    using Azure.Storage.Blobs.Specialized;
-    using Microsoft.Azure.Documents.SystemFunctions;
 
     public class ChangeFeedProcessorHost
     {
@@ -184,13 +180,8 @@
 
             if (!String.IsNullOrEmpty(config.BlobConnectionString))
             {
-
-                Console.WriteLine("blobConnectionString: " + this.config.BlobConnectionString);
-                Console.WriteLine("blobContainerName: " + this.config.BlobContainerName);
-
                 BlobServiceClient blobServiceClient = new BlobServiceClient(config.BlobConnectionString);
                 containerClient = blobServiceClient.GetBlobContainerClient(config.BlobContainerName);
-
                 await containerClient.CreateIfNotExistsAsync();
             } 
             
@@ -198,7 +189,7 @@
             //AppendBlobClient appendBlobClient = new AppendBlobClient("DefaultEndpointsProtocol=https;AccountName=revin;AccountKey=rmN8Esbnyal8q0keILZWx2XdXZpmTHXOVs0lNIigs/nhK25J25zWHWPxDik7LZ2mqIEolJclHPgyEtBOfa4NfA==;EndpointSuffix=core.windows.net", "cosmosdb-live-etl", "FailedImportDocs.csv");
             //appendBlobClient.AppendBlockAsync("hello");
 
-            var docObserverFactory = new DocumentFeedObserverFactory(destClient, destCollInfo, docTransformer, containerClient);
+            var docObserverFactory = new DocumentFeedObserverFactory(config.SourcePartitionKeys, config.TargetPartitionKey, destClient, destCollInfo, docTransformer, containerClient);
 
             changeFeedProcessor = await new ChangeFeedProcessorBuilder()
                 .WithObserverFactory(docObserverFactory)

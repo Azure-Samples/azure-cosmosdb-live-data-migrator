@@ -17,6 +17,12 @@ html
     if (typeof migration === "undefined")
       form.well(action="/addMigration", method="post")
         .form-group
+          label(for="sourcePartitionKeys") Source Partition Key Attributes (Optional):
+          input.form-control(name="sourcePartitionKeys", type="textbox")
+        .form-group
+          label(for="targetPartitionKey") Target Partition Key Attribute (Optional):
+          input.form-control(name="targetPartitionKey", type="textbox")
+        .form-group
           label(for="monitoredUri") Source Endpoint:
           input.form-control(name="monitoredUri", type="textbox")
         .form-group
@@ -53,6 +59,12 @@ html
           label(for="leaseCollectionName") Lease Collection Name:
           input.form-control(name="leaseCollectionName", type="textbox")
         .form-group
+          label(for="blobConnectionString") Blob Connection String for Failed/Bad Records tracking (Optional):
+          input.form-control(name="blobConnectionString", type="textbox")
+        .form-group
+          label(for="blobContainerName") Blob Connection String for Failed/Bad Records tracking (Optional):
+          input.form-control(name="blobContainerName", type="textbox")
+        .form-group
           label(for="dataAgeInHours") Maximum data age in hours (Optional) :
           input.form-control(name="dataAgeInHours", type="textbox")  
 
@@ -64,6 +76,12 @@ html
 
       form(action="/completeMigration", method="post")
         table.table.table-striped.table-bordered
+          tr
+            td Source Partition Key Attributes (Optional)
+            td #{migration.sourcePartitionKeys}
+          tr
+            td Target Partition Key Attribute (Optional)
+            td #{migration.targetPartitionKey}
           tr
             td Source Endpoint
             td #{migration.monitoredUri}
