@@ -78,8 +78,6 @@
             BulkImportResponse bulkImportResponse = new BulkImportResponse();
             try
             {
-                //string targetPartitionKey = TargetPartitionKey;
-                //string sourcePartitionKeys = SourcePartitionKeys;
                 Boolean isSyntheticKey = SourcePartitionKeys.Contains(",");
                 Boolean isNestedAttribute = SourcePartitionKeys.Contains("/");
 
