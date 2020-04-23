@@ -81,8 +81,9 @@
     <Reference Include="Microsoft.ApplicationInsights, Version=2.7.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.ApplicationInsights.2.7.2\lib\net46\Microsoft.ApplicationInsights.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Azure.CosmosDB.BulkImport, Version=2.5.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+    <Reference Include="Microsoft.Azure.CosmosDB.BulkImport, Version=2.5.1.0, Culture=neutral, PublicKeyToken=69c3241e6f0468ca, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Azure.CosmosDB.BulkExecutor.1.8.8\lib\net451\Microsoft.Azure.CosmosDB.BulkImport.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
     </Reference>
     <Reference Include="Microsoft.Azure.Documents.ChangeFeedProcessor, Version=2.2.8.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Azure.DocumentDB.ChangeFeedProcessor.2.2.8\lib\net45\Microsoft.Azure.Documents.ChangeFeedProcessor.dll</HintPath>
