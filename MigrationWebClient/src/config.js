@@ -1,7 +1,7 @@
 var config = {}
 
-config.host = process.env.cosmosdbaccount || "https://migrationdetails-eastus.documents.azure.com:443/";
-config.authKey = process.env.cosmosdbkey || "1mYccQpI3hoLtpBgmzCCLjQOXPnluPSFLxiK5jE3PBJZcrIRH5P47ZlwKmuxiL660k3NVhT5sSAfGtzqqS3lFQ==";
+config.host = process.env.cosmosdbaccount || "";
+config.authKey = process.env.cosmosdbkey || "";
 config.databaseId = process.env.cosmosdbdb || "migrationdetailsdb";
 config.collectionId = process.env.cosmosdbcollection || "migrationdetailscoll";
 config.sourceClient = null;

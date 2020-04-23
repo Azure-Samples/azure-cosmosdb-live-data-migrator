@@ -173,9 +173,6 @@
 
             var docTransformer = new DefaultDocumentTransformer();
 
-            //BlobServiceClient blobServiceClient = new BlobServiceClient("DefaultEndpointsProtocol=https;AccountName=revin;AccountKey=rmN8Esbnyal8q0keILZWx2XdXZpmTHXOVs0lNIigs/nhK25J25zWHWPxDik7LZ2mqIEolJclHPgyEtBOfa4NfA==;EndpointSuffix=core.windows.net");
-            //BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient("cosmosdb-live-etl");
-
             BlobContainerClient containerClient = null;
 
             if (!String.IsNullOrEmpty(config.BlobConnectionString))
@@ -184,10 +181,6 @@
                 containerClient = blobServiceClient.GetBlobContainerClient(config.BlobContainerName);
                 await containerClient.CreateIfNotExistsAsync();
             } 
-            
-
-            //AppendBlobClient appendBlobClient = new AppendBlobClient("DefaultEndpointsProtocol=https;AccountName=revin;AccountKey=rmN8Esbnyal8q0keILZWx2XdXZpmTHXOVs0lNIigs/nhK25J25zWHWPxDik7LZ2mqIEolJclHPgyEtBOfa4NfA==;EndpointSuffix=core.windows.net", "cosmosdb-live-etl", "FailedImportDocs.csv");
-            //appendBlobClient.AppendBlockAsync("hello");
 
             var docObserverFactory = new DocumentFeedObserverFactory(config.SourcePartitionKeys, config.TargetPartitionKey, destClient, destCollInfo, docTransformer, containerClient);
 

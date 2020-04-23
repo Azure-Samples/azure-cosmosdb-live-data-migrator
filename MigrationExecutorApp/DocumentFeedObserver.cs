@@ -28,11 +28,9 @@
         private readonly Uri destinationCollectionUri;
         private IBulkExecutor bulkExecutor;
         private IDocumentTransformer documentTransformer;
-        //private AppendBlobClient appendBlobClient;
         private BlobContainerClient containerClient;
         private readonly string SourcePartitionKeys;
         private readonly string TargetPartitionKey;
-
 
         public DocumentFeedObserver(string SourcePartitionKeys, string TargetPartitionKey, DocumentClient client, DocumentCollectionInfo destCollInfo, IDocumentTransformer documentTransformer, BlobContainerClient containerClient)
         {
@@ -95,40 +93,20 @@
                     maxConcurrencyPerPartitionKeyRange: 1,
                     disableAutomaticIdGeneration: true,
                     maxInMemorySortingBatchSize: null,
-                    cancellationToken: new CancellationToken());
-
-                LogMetrics(context, bulkImportResponse);
+                    cancellationToken: new CancellationToken(),
+                    maxMiniBatchSizeBytes: 100 * 1024);
 
                 if (bulkImportResponse.FailedImports.Count > 0 && containerClient != null)
                 {
-                    BlobClient blobClient = containerClient.GetBlobClient("FailedImportDocs" + Guid.NewGuid().ToString() + ".csv");
-
-                    var failedImportDocs = JsonConvert.SerializeObject(String.Join(",", bulkImportResponse.FailedImports.First().DocumentsFailedToImport));
-
-                    byte[] byteArray = Encoding.ASCII.GetBytes(bulkImportResponse.FailedImports.First().BulkImportFailureException.GetType() + "|" + bulkImportResponse.FailedImports.First().DocumentsFailedToImport.Count + "|" + bulkImportResponse.FailedImports.First().BulkImportFailureException.Message.Substring(0, 100) + "|" + failedImportDocs);
-
-                    using (var ms = new MemoryStream(byteArray))
-                    {
-                        //await appendBlobClient.AppendBlockAsync(ms);
-                        await blobClient.UploadAsync(ms, overwrite: true);
-                    }
+                    WriteFailedDocsToBlob("FailedImportDocs", containerClient, bulkImportResponse);
                 }
 
                 if (bulkImportResponse.BadInputDocuments.Count > 0 && containerClient != null)
                 {
-                    BlobClient blobClient = containerClient.GetBlobClient("BadInputDocs" + Guid.NewGuid().ToString() + ".csv");
-
-                    var badInputDocs = JsonConvert.SerializeObject(String.Join(",", bulkImportResponse.BadInputDocuments));
-
-                    byte[] byteArray = Encoding.ASCII.GetBytes("BadInputDocuments, " + bulkImportResponse.BadInputDocuments.Count + "|" + badInputDocs);
-
-                    using (var ms = new MemoryStream(byteArray))
-                    {
-                        //await appendBlobClient.AppendBlockAsync(ms);
-                        await blobClient.UploadAsync(ms, overwrite: true);
-                    }
+                    WriteFailedDocsToBlob("BadInputDocs", containerClient, bulkImportResponse);
                 }
 
+                LogMetrics(context, bulkImportResponse);
             }
             catch (Exception e)
             {
@@ -138,35 +116,42 @@
             Program.telemetryClient.Flush();
         }
 
+        private static void WriteFailedDocsToBlob(string failureType, BlobContainerClient containerClient, BulkImportResponse bulkImportResponse)
+        {
+            string failedDocs;
+            byte[] byteArray;
+            BlobClient blobClient = containerClient.GetBlobClient(failureType + Guid.NewGuid().ToString() + ".csv");
+            if (failureType == "FailedImportDocs")
+            {
+                failedDocs = JsonConvert.SerializeObject(String.Join(",", bulkImportResponse.FailedImports.First().DocumentsFailedToImport));
+                byteArray = Encoding.ASCII.GetBytes(bulkImportResponse.FailedImports.First().BulkImportFailureException.GetType() + "|" + bulkImportResponse.FailedImports.First().DocumentsFailedToImport.Count + "|" + bulkImportResponse.FailedImports.First().BulkImportFailureException.Message.Substring(0, 100) + "|" + failedDocs);
+            }
+            else
+            {
+                failedDocs = JsonConvert.SerializeObject(String.Join(",", bulkImportResponse.BadInputDocuments));
+                byteArray = Encoding.ASCII.GetBytes(failureType + ", " + bulkImportResponse.BadInputDocuments.Count + "|" + failedDocs);
+            }
+            using (var ms = new MemoryStream(byteArray))
+            {
+                blobClient.UploadAsync(ms, overwrite: true);
+            }
+        }
+
         private static void LogMetrics(IChangeFeedObserverContext context, BulkImportResponse bulkImportResponse)
         {
-            //Console.WriteLine("Imported Documents: " + bulkImportResponse.NumberOfDocumentsImported
-            //                    + "  by process " + Process.GetCurrentProcess().Id);
-            //Console.WriteLine("RUs consumed : " + bulkImportResponse.NumberOfDocumentsImported
-            //    + " by process " + Process.GetCurrentProcess().Id);
-
             Program.telemetryClient.TrackMetric("TotalInserted", bulkImportResponse.NumberOfDocumentsImported);
-
             Program.telemetryClient.TrackMetric("InsertedDocuments-Process:"
                 + Process.GetCurrentProcess().Id, bulkImportResponse.NumberOfDocumentsImported);
-
             Program.telemetryClient.TrackMetric("TotalRUs", bulkImportResponse.TotalRequestUnitsConsumed);
 
             if (bulkImportResponse.BadInputDocuments.Count > 0)
             {
                 Program.telemetryClient.TrackMetric("BadInputDocsCount", bulkImportResponse.BadInputDocuments.Count);
-                //Program.telemetryClient.TrackEvent(String.Join("|", bulkImportResponse.BadInputDocuments));
             }
 
             if (bulkImportResponse.FailedImports.Count > 0)
             {
                 Program.telemetryClient.TrackMetric("FailedImportDocsCount", bulkImportResponse.FailedImports.First().DocumentsFailedToImport.Count);
-
-                //var failedImportDocs = String.Join("|", bulkImportResponse.FailedImports.First().DocumentsFailedToImport);
-
-                //Program.telemetryClient.TrackEvent("Errors encountered in bulk import API execution. Number of failures corresponding to exception of type: "
-                //    + bulkImportResponse.FailedImports.First().BulkImportFailureException.Message + " = " + bulkImportResponse.FailedImports.First().DocumentsFailedToImport.Count
-                //    + ". The failed import docs are: " + failedImportDocs);
             }
         }
 
