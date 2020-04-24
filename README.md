@@ -23,20 +23,12 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 ### Quickstart
 
-- Sign in to the Azure portal and select Create a resource option
+- Click deploy to Azure: 
 
-    ![Templatedeployment](images/createresource.png)
+<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fazure-cosmosdb-live-data-migrator%2Fmaster%2FMigrationAppResourceGroup%2Fazuredeploy.json" target="_blank">
+    <img src="https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true"/>
 
-- Find Template deployment (deploy using custom templates) and choose Build your own template as below. 
-	
-	![Templatedeployment](images/searchdeploytemplate.png)
-	![Templatedeploymentcreate](images/buildyourowntemplate.png)
-
-
-- Copy the contents of [deployment template](MigrationAppResourceGroup/azuredeploy.json) and click Save.
-
-	![Templatedeployment](images/edittemplate.png)
-
+You will then be presented will some fields you need to populate for the deployment.
 
 - It may be a good practice to create a new Resource group so that it is easy to co-locate the different components of Service. Please make sure that the Resource group Region is same as the Region of Cosmos DB Source and Target collections.
 
