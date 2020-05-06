@@ -47,7 +47,7 @@ You will then be presented will some fields you need to populate for the deploym
 
 - Add the Source and Target Cosmos DB connection details 
 
-- Add the Cosmos DB connection details for Lease DB, which is used in the ChangeFeed process. 
+- Add the Cosmos DB connection details for Lease DB, which is used in the ChangeFeed process. The lease collection, if partitioned, must have partition key column named as "id".
 
 - [Optional] Add the Azure Blob Connection string and Container Name to store the failed / bad records. The complete records would be stored in this Container and can be used for point inserts.
 
