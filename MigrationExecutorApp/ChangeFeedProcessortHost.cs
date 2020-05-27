@@ -1,36 +1,71 @@
 ﻿namespace MigrationConsoleApp
 {
     using System;
+    using System.Collections.Concurrent;
+    using System.Collections.Generic;
     using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Runtime.Serialization.Json;
+    using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
+    using System.Xml.Linq;
+    using System.Xml.XPath;
     using Azure.Storage.Blobs;
+    using Microsoft.Azure.Cosmos;
+    using Microsoft.Azure.Cosmos.Fluent;
     using Microsoft.Azure.Documents;
-    using Microsoft.Azure.Documents.ChangeFeedProcessor;
-    using Microsoft.Azure.Documents.ChangeFeedProcessor.PartitionManagement;
-    using Microsoft.Azure.Documents.Client;
+    using Newtonsoft.Json;
+
 
     public class ChangeFeedProcessorHost
     {
         private MigrationConfig config;
-        private IChangeFeedProcessor changeFeedProcessor;
-        private DocumentClient destinationCollectionClient;
+        private ChangeFeedProcessor changeFeedProcessor;
+        private static CosmosClient destinationCollectionClient;
+        private static CosmosClient sourceCollectionClient;
+        private static Container containerToStoreDocuments;
+        private readonly string SourcePartitionKeys;
+        private readonly string TargetPartitionKey;
+        BlobContainerClient containerClient = null;
 
-        public DocumentClient GetDestinationCollectionClient()
+
+        public ChangeFeedProcessorHost(MigrationConfig config)
+        {
+            this.config = config;
+            SourcePartitionKeys = config.SourcePartitionKeys;
+            TargetPartitionKey = config.TargetPartitionKey;
+            destinationCollectionClient = GetCustomClient("AccountEndpoint=" + config.DestUri + ";AccountKey=" + config.DestSecretKey);
+            //destinationCollectionClient = GetCustomClient("AccountEndpoint=https://tvk-sqlapi.documents.azure.com:443/;AccountKey=YdtPFdcmsOTSrPzyobK2tqRJzDmQwkn4EDsBaZimDZwiwGP2qsc8YAEMDF3xk0NDwf0acP4cvwHgJrXSJ6kU8A==;");
+
+            sourceCollectionClient = GetCustomClient("AccountEndpoint=" + config.MonitoredUri + ";AccountKey=" + config.MonitoredSecretKey);
+            //sourceCollectionClient = GetCustomClient("AccountEndpoint=https://tvk-sqlapi.documents.azure.com:443/;AccountKey=YdtPFdcmsOTSrPzyobK2tqRJzDmQwkn4EDsBaZimDZwiwGP2qsc8YAEMDF3xk0NDwf0acP4cvwHgJrXSJ6kU8A==;");
+        }
+
+        public CosmosClient GetDestinationCollectionClient()
         {
             if (destinationCollectionClient == null)
             {
-                destinationCollectionClient = new DocumentClient(
-                    new Uri(config.DestUri), config.DestSecretKey,
-                new ConnectionPolicy() { ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp },
-                ConsistencyLevel.Eventual);
+                //AccountEndpoint=https://tvk-sqlapi.documents.azure.com:443/;AccountKey=YdtPFdcmsOTSrPzyobK2tqRJzDmQwkn4EDsBaZimDZwiwGP2qsc8YAEMDF3xk0NDwf0acP4cvwHgJrXSJ6kU8A==;
+                destinationCollectionClient = GetCustomClient("AccountEndpoint=" + config.DestUri + ";AccountKey=" + config.DestSecretKey);
+                //destinationCollectionClient = GetCustomClient("AccountEndpoint=https://tvk-sqlapi.documents.azure.com:443/;AccountKey=YdtPFdcmsOTSrPzyobK2tqRJzDmQwkn4EDsBaZimDZwiwGP2qsc8YAEMDF3xk0NDwf0acP4cvwHgJrXSJ6kU8A==;");
+                
+                //sourceCollectionClient = GetCustomClient("AccountEndpoint=" + config.MonitoredUri + ";AccountKey=" + config.MonitoredSecretKey);
+                sourceCollectionClient = GetCustomClient("AccountEndpoint=https://tvk-sqlapi.documents.azure.com:443/;AccountKey=YdtPFdcmsOTSrPzyobK2tqRJzDmQwkn4EDsBaZimDZwiwGP2qsc8YAEMDF3xk0NDwf0acP4cvwHgJrXSJ6kU8A==;");
             }
 
             return destinationCollectionClient;
         }
 
-        public ChangeFeedProcessorHost(MigrationConfig config)
+        private static CosmosClient GetCustomClient(string connectionString)
         {
-            this.config = config;
+            CosmosClientBuilder builder = new CosmosClientBuilder(connectionString)
+                .WithApplicationName("CosmosFunctionsMigration")
+                .WithBulkExecution(true)
+                .WithThrottlingRetryOptions(TimeSpan.FromSeconds(30), 10);
+
+            return builder.Build();
         }
 
         public async Task StartAsync()
@@ -79,16 +114,13 @@
 
             await this.RunChangeFeedHostAsync();
         }
+
         public async Task CreateCollectionIfNotExistsAsync(string endPointUri, string secretKey, string databaseName, string collectionName, int throughput)
         {
-            using (DocumentClient client = new DocumentClient(new Uri(endPointUri), secretKey))
+            //using (CosmosClient client = GetCustomClient("AccountEndpoint=" + endPointUri + ";AccountKey=" + secretKey))
+            using (CosmosClient client = GetCustomClient("AccountEndpoint=https://tvk-sqlapi.documents.azure.com:443/;AccountKey=YdtPFdcmsOTSrPzyobK2tqRJzDmQwkn4EDsBaZimDZwiwGP2qsc8YAEMDF3xk0NDwf0acP4cvwHgJrXSJ6kU8A==;"))   
             {
-                await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseName });
-
-                await client.CreateDocumentCollectionIfNotExistsAsync(
-                    UriFactory.CreateDatabaseUri(databaseName),
-                    new DocumentCollection() { Id = collectionName },
-                    new RequestOptions { OfferThroughput = throughput });
+                await client.CreateDatabaseIfNotExistsAsync(databaseName);
             }
         }
 
@@ -108,92 +140,131 @@
             changeFeedProcessor = null;
         }
 
-        public async Task<IChangeFeedProcessor> RunChangeFeedHostAsync()
+        public async Task<ChangeFeedProcessor> RunChangeFeedHostAsync()
         {
             string hostName = Guid.NewGuid().ToString();
             Trace.TraceInformation("Host name {0}", hostName);
 
-            // monitored collection info 
-            var documentCollectionLocation = new DocumentCollectionInfo
-            {
-                Uri = new Uri(this.config.MonitoredUri),
-                MasterKey = this.config.MonitoredSecretKey,
-                DatabaseName = this.config.MonitoredDbName,
-                CollectionName = this.config.MonitoredCollectionName
-            };
-
-            var policy = new ConnectionPolicy()
-            {
-                ConnectionMode = ConnectionMode.Direct,
-                ConnectionProtocol = Protocol.Tcp
-            };
-
-            policy.PreferredLocations.Add("North Europe");
-
-            // lease collection info 
-            var leaseCollectionLocation = new DocumentCollectionInfo
-            {
-                Uri = new Uri(this.config.LeaseUri),
-                MasterKey = this.config.LeaseSecretKey,
-                DatabaseName = this.config.LeaseDbName,
-                CollectionName = this.config.LeaseCollectionName,
-                ConnectionPolicy = policy
-            };
-
-            // destination collection info 
-            var destCollInfo = new DocumentCollectionInfo
-            {
-                Uri = new Uri(this.config.DestUri),
-                MasterKey = this.config.DestSecretKey,
-                DatabaseName = this.config.DestDbName,
-                CollectionName = this.config.DestCollectionName
-            };
-
-            var processorOptions = new ChangeFeedProcessorOptions();
-            if(config.DataAgeInHours.HasValue) {
-                if (config.DataAgeInHours.Value >= 0)
-                {
-                    processorOptions.StartTime = DateTime.UtcNow.Subtract(TimeSpan.FromHours(config.DataAgeInHours.Value));
-                }
-            } else
-            {
-                processorOptions.StartFromBeginning = true;
-            }
-
-            processorOptions.LeaseRenewInterval = TimeSpan.FromSeconds(30);
-
-            Trace.TraceInformation("Processor options Starts from Beginning - {0}, Lease renew interval - {1}",
-                processorOptions.StartFromBeginning,
-                processorOptions.LeaseRenewInterval.ToString());
-
-            processorOptions.MaxItemCount = 1000;
-            var destClient = new DocumentClient(destCollInfo.Uri, destCollInfo.MasterKey,
-                new ConnectionPolicy() { ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp },
-                ConsistencyLevel.Eventual);
 
             var docTransformer = new DefaultDocumentTransformer();
-
-            BlobContainerClient containerClient = null;
-
+          
             if (!String.IsNullOrEmpty(config.BlobConnectionString))
             {
                 BlobServiceClient blobServiceClient = new BlobServiceClient(config.BlobConnectionString);
                 containerClient = blobServiceClient.GetBlobContainerClient(config.BlobContainerName);
                 await containerClient.CreateIfNotExistsAsync();
-            } 
+            }
 
-            var docObserverFactory = new DocumentFeedObserverFactory(config.SourcePartitionKeys, config.TargetPartitionKey, destClient, destCollInfo, docTransformer, containerClient);
+            DateTime starttime = DateTime.MinValue.ToUniversalTime();
+            if (config.DataAgeInHours.HasValue)
+            {
+                if (config.DataAgeInHours.Value >= 0)
+                {
+                    starttime = DateTime.UtcNow.Subtract(TimeSpan.FromHours(config.DataAgeInHours.Value));
+                }
+            }
 
-            changeFeedProcessor = await new ChangeFeedProcessorBuilder()
-                .WithObserverFactory(docObserverFactory)
-                .WithHostName(hostName)
-                .WithFeedCollection(documentCollectionLocation)
-                .WithLeaseCollection(leaseCollectionLocation)
-                .WithProcessorOptions(processorOptions)
-                .WithFeedDocumentClient(new DocumentClient(documentCollectionLocation.Uri, documentCollectionLocation.MasterKey, policy, ConsistencyLevel.Eventual))
-                .BuildAsync();
+            changeFeedProcessor = sourceCollectionClient.GetContainer(config.MonitoredDbName, config.MonitoredCollectionName)
+                .GetChangeFeedProcessorBuilder<Document>("Live Data Migrator", HandleChangesAsync)
+                .WithInstanceName("consoleHost")
+                .WithLeaseContainer(sourceCollectionClient.GetContainer(config.LeaseDbName, config.LeaseCollectionName))
+                .WithStartTime(starttime)               
+                .WithMaxItems(1000)
+                .Build();
+
             await changeFeedProcessor.StartAsync().ConfigureAwait(false);
+
             return changeFeedProcessor;
         }
+
+        async Task HandleChangesAsync(IReadOnlyCollection<Document> docs, CancellationToken cancellationToken)
+        {
+            Boolean isSyntheticKey = SourcePartitionKeys.Contains(",");
+            Boolean isNestedAttribute = SourcePartitionKeys.Contains("/");
+            Container targetContainer = destinationCollectionClient.GetContainer(config.DestDbName, config.DestCollectionName);
+            containerToStoreDocuments = targetContainer;
+            ConcurrentDictionary<int, int> failedMetrics = new ConcurrentDictionary<int, int>();
+            List<Task> tasks = new List<Task>();
+            List<Document> failedDocs = new List<Document>();
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            Document document = new Document();
+            foreach (Document doc in docs)
+            {
+                Console.WriteLine($"\tDetected operation...");
+                document = (SourcePartitionKeys != null & TargetPartitionKey != null) ? MapPartitionKey(doc, isSyntheticKey, TargetPartitionKey, isNestedAttribute, SourcePartitionKeys) : document = doc;
+                tasks.Add(containerToStoreDocuments.CreateItemAsync(item: document, cancellationToken: cancellationToken).ContinueWith((Task<ItemResponse<Document>> task) =>
+                {
+                    AggregateException innerExceptions = task.Exception.Flatten();
+                    CosmosException cosmosException = (CosmosException)innerExceptions.InnerExceptions.FirstOrDefault(innerEx => innerEx is CosmosException);
+                    failedMetrics.AddOrUpdate((int)cosmosException.StatusCode, 0, (key, value) => value + 1);
+                    WriteFailedDocsToBlob("FailedDocImport", containerClient, cosmosException, doc);
+                }, TaskContinuationOptions.OnlyOnFaulted));
+                // Simulate work
+                await Task.Delay(1);
+            }
+        }
+
+        private static void WriteFailedDocsToBlob(string failureType, BlobContainerClient containerClient, CosmosException cosmosException, Document doc)
+        {
+            string failedDoc;
+            byte[] byteArray;
+            BlobClient blobClient = containerClient.GetBlobClient(failureType + Guid.NewGuid().ToString() + ".csv");
+
+            failedDoc = JsonConvert.SerializeObject(String.Join(",", doc));
+            byteArray = Encoding.ASCII.GetBytes(failureType + ", " + cosmosException + "|" + failedDoc);
+      
+            using (var ms = new MemoryStream(byteArray))
+            {
+                blobClient.UploadAsync(ms, overwrite: true);
+            }
+        }
+
+        public static Document MapPartitionKey(Document doc, Boolean isSyntheticKey, string targetPartitionKey, Boolean isNestedAttribute, string sourcePartitionKeys)
+        {
+            if (isSyntheticKey)
+            {
+                doc = CreateSyntheticKey(doc, sourcePartitionKeys, isNestedAttribute, targetPartitionKey);
+            }
+            else
+            {
+                doc.SetPropertyValue(targetPartitionKey, isNestedAttribute == true ? GetNestedValue(doc, sourcePartitionKeys) : doc.GetPropertyValue<string>(sourcePartitionKeys));
+            }
+            return doc;
+        }
+
+        public static Document CreateSyntheticKey(Document doc, string sourcePartitionKeys, Boolean isNestedAttribute, string targetPartitionKey)
+        {
+            StringBuilder syntheticKey = new StringBuilder();
+            string[] sourceAttributeArray = sourcePartitionKeys.Split(',');
+            int arraylength = sourceAttributeArray.Length;
+            int count = 1;
+            foreach (string rawattribute in sourceAttributeArray)
+            {
+                string attribute = rawattribute.Trim();
+                if (count == arraylength)
+                {
+                    string val = isNestedAttribute == true ? GetNestedValue(doc, attribute) : doc.GetPropertyValue<string>(attribute);
+                    syntheticKey.Append(val);
+                }
+                else
+                {
+                    string val = isNestedAttribute == true ? GetNestedValue(doc, attribute) + "-" : doc.GetPropertyValue<string>(attribute) + "-";
+                    syntheticKey.Append(val);
+                }
+                count++;
+            }
+            doc.SetPropertyValue(targetPartitionKey, syntheticKey.ToString());
+            return doc;
+        }
+
+        public static string GetNestedValue(Document doc, string path)
+        {
+            var jsonReader = JsonReaderWriterFactory.CreateJsonReader(Encoding.UTF8.GetBytes(doc.ToString()), new System.Xml.XmlDictionaryReaderQuotas());
+            var root = XElement.Load(jsonReader);
+            string value = root.XPathSelectElement("//" + path).Value;
+            return value;
+        }
+
     }
+
 }
