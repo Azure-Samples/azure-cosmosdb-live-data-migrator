@@ -14,7 +14,6 @@
     using System.Xml.XPath;
     using Azure.Storage.Blobs;
     using Microsoft.Azure.Cosmos;
-    using Microsoft.Azure.Cosmos.Fluent;
     using Microsoft.Azure.Documents;
     using Newtonsoft.Json;
 
@@ -36,36 +35,19 @@
             this.config = config;
             SourcePartitionKeys = config.SourcePartitionKeys;
             TargetPartitionKey = config.TargetPartitionKey;
-            destinationCollectionClient = GetCustomClient("AccountEndpoint=" + config.DestUri + ";AccountKey=" + config.DestSecretKey);
-            //destinationCollectionClient = GetCustomClient("AccountEndpoint=https://tvk-sqlapi.documents.azure.com:443/;AccountKey=YdtPFdcmsOTSrPzyobK2tqRJzDmQwkn4EDsBaZimDZwiwGP2qsc8YAEMDF3xk0NDwf0acP4cvwHgJrXSJ6kU8A==;");
-
-            sourceCollectionClient = GetCustomClient("AccountEndpoint=" + config.MonitoredUri + ";AccountKey=" + config.MonitoredSecretKey);
-            //sourceCollectionClient = GetCustomClient("AccountEndpoint=https://tvk-sqlapi.documents.azure.com:443/;AccountKey=YdtPFdcmsOTSrPzyobK2tqRJzDmQwkn4EDsBaZimDZwiwGP2qsc8YAEMDF3xk0NDwf0acP4cvwHgJrXSJ6kU8A==;");
+            destinationCollectionClient = new CosmosClient(config.DestUri, config.DestSecretKey, new CosmosClientOptions() { AllowBulkExecution = true });
+            sourceCollectionClient = new CosmosClient(config.MonitoredUri, config.MonitoredSecretKey, new CosmosClientOptions() { AllowBulkExecution = true });
         }
 
         public CosmosClient GetDestinationCollectionClient()
         {
             if (destinationCollectionClient == null)
             {
-                //AccountEndpoint=https://tvk-sqlapi.documents.azure.com:443/;AccountKey=YdtPFdcmsOTSrPzyobK2tqRJzDmQwkn4EDsBaZimDZwiwGP2qsc8YAEMDF3xk0NDwf0acP4cvwHgJrXSJ6kU8A==;
-                destinationCollectionClient = GetCustomClient("AccountEndpoint=" + config.DestUri + ";AccountKey=" + config.DestSecretKey);
-                //destinationCollectionClient = GetCustomClient("AccountEndpoint=https://tvk-sqlapi.documents.azure.com:443/;AccountKey=YdtPFdcmsOTSrPzyobK2tqRJzDmQwkn4EDsBaZimDZwiwGP2qsc8YAEMDF3xk0NDwf0acP4cvwHgJrXSJ6kU8A==;");
-                
-                //sourceCollectionClient = GetCustomClient("AccountEndpoint=" + config.MonitoredUri + ";AccountKey=" + config.MonitoredSecretKey);
-                sourceCollectionClient = GetCustomClient("AccountEndpoint=https://tvk-sqlapi.documents.azure.com:443/;AccountKey=YdtPFdcmsOTSrPzyobK2tqRJzDmQwkn4EDsBaZimDZwiwGP2qsc8YAEMDF3xk0NDwf0acP4cvwHgJrXSJ6kU8A==;");
+                destinationCollectionClient = new CosmosClient(config.DestUri, config.DestSecretKey, new CosmosClientOptions() { AllowBulkExecution = true });
+                sourceCollectionClient = new CosmosClient(config.MonitoredUri, config.MonitoredSecretKey, new CosmosClientOptions() { AllowBulkExecution = true });
             }
 
             return destinationCollectionClient;
-        }
-
-        private static CosmosClient GetCustomClient(string connectionString)
-        {
-            CosmosClientBuilder builder = new CosmosClientBuilder(connectionString)
-                .WithApplicationName("CosmosFunctionsMigration")
-                .WithBulkExecution(true)
-                .WithThrottlingRetryOptions(TimeSpan.FromSeconds(30), 10);
-
-            return builder.Build();
         }
 
         public async Task StartAsync()
@@ -117,8 +99,7 @@
 
         public async Task CreateCollectionIfNotExistsAsync(string endPointUri, string secretKey, string databaseName, string collectionName, int throughput)
         {
-            //using (CosmosClient client = GetCustomClient("AccountEndpoint=" + endPointUri + ";AccountKey=" + secretKey))
-            using (CosmosClient client = GetCustomClient("AccountEndpoint=https://tvk-sqlapi.documents.azure.com:443/;AccountKey=YdtPFdcmsOTSrPzyobK2tqRJzDmQwkn4EDsBaZimDZwiwGP2qsc8YAEMDF3xk0NDwf0acP4cvwHgJrXSJ6kU8A==;"))   
+            using (CosmosClient client = new CosmosClient(config.DestUri, config.DestSecretKey, new CosmosClientOptions() { AllowBulkExecution = true }))   
             {
                 await client.CreateDatabaseIfNotExistsAsync(databaseName);
             }
@@ -165,7 +146,7 @@
             }
 
             changeFeedProcessor = sourceCollectionClient.GetContainer(config.MonitoredDbName, config.MonitoredCollectionName)
-                .GetChangeFeedProcessorBuilder<Document>("Live Data Migrator", HandleChangesAsync)
+                .GetChangeFeedProcessorBuilder<Document>("Live Data Migrator", ProcessChangesAsync)
                 .WithInstanceName("consoleHost")
                 .WithLeaseContainer(sourceCollectionClient.GetContainer(config.LeaseDbName, config.LeaseCollectionName))
                 .WithStartTime(starttime)               
@@ -177,7 +158,7 @@
             return changeFeedProcessor;
         }
 
-        async Task HandleChangesAsync(IReadOnlyCollection<Document> docs, CancellationToken cancellationToken)
+        async Task ProcessChangesAsync(IReadOnlyCollection<Document> docs, CancellationToken cancellationToken)
         {
             Boolean isSyntheticKey = SourcePartitionKeys.Contains(",");
             Boolean isNestedAttribute = SourcePartitionKeys.Contains("/");
