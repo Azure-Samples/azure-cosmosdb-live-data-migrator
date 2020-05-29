@@ -7,6 +7,7 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 * Live data migration from a source Cosmos DB Container to a target Cosmos DB Container
 * Ability to read and migrate from a given point of time in source
+* Support for mapping synthetic partition keys during migration
 * Ability to scale up or scale down the number of workers while the migration is in progress
 * Support for dead-letter queue where in the Failed import documents and the Bad Input documents are stored in the configured Azure storage location so as to help perform point inserts post migration
 * Migration Monitoring web UI that tracks the completion percentage, ETA, Average insert rate etc:
