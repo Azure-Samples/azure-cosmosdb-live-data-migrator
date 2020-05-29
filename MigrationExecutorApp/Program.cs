@@ -21,7 +21,7 @@ namespace MigrationConsoleApp
 
         private static string appInsightsInstrumentationKey = ConfigurationManager.AppSettings["appinsightsinstrumentationkey"];
 
-        private static CosmosClient client = GetCustomClient("AccountEndpoint="+ endpoint + ";AccountKey="+ masterkey);
+        private static CosmosClient client = new CosmosClient(endpoint,masterkey);
         private string currentMigrationId = null;
         private ChangeFeedProcessorHost changeFeedProcessorHost = null;
         static void Main(string[] args)
