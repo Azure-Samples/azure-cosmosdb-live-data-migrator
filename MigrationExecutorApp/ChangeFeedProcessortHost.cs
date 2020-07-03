@@ -131,6 +131,7 @@
                 .GetChangeFeedProcessorBuilder<Document>("Live Data Migrator", ProcessChangesAsync)
                 .WithInstanceName(hostName)
                 .WithLeaseContainer(leaseCollectionClient.GetContainer(config.LeaseDbName, config.LeaseCollectionName))
+                .WithLeaseConfiguration(TimeSpan.FromSeconds(30))
                 .WithStartTime(starttime)               
                 .WithMaxItems(1000)
                 .Build();
