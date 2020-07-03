@@ -22,6 +22,7 @@
         private ChangeFeedProcessor changeFeedProcessor;
         private static CosmosClient destinationCollectionClient;
         private static CosmosClient sourceCollectionClient;
+        private static CosmosClient leaseCollectionClient;
         private static Container containerToStoreDocuments;
         private readonly string SourcePartitionKeys;
         private readonly string TargetPartitionKey;
@@ -33,6 +34,7 @@
             this.config = config;
             SourcePartitionKeys = config.SourcePartitionKeys;
             TargetPartitionKey = config.TargetPartitionKey;
+            leaseCollectionClient = new CosmosClient(config.LeaseUri, config.LeaseSecretKey);
             sourceCollectionClient = new CosmosClient(config.MonitoredUri, config.MonitoredSecretKey);
             destinationCollectionClient = new CosmosClient(config.DestUri, config.DestSecretKey, new CosmosClientOptions() { AllowBulkExecution = true });            
         }
@@ -127,8 +129,8 @@
 
             changeFeedProcessor = sourceCollectionClient.GetContainer(config.MonitoredDbName, config.MonitoredCollectionName)
                 .GetChangeFeedProcessorBuilder<Document>("Live Data Migrator", ProcessChangesAsync)
-                .WithInstanceName("consoleHost")
-                .WithLeaseContainer(sourceCollectionClient.GetContainer(config.LeaseDbName, config.LeaseCollectionName))
+                .WithInstanceName(hostName)
+                .WithLeaseContainer(leaseCollectionClient.GetContainer(config.LeaseDbName, config.LeaseCollectionName))
                 .WithStartTime(starttime)               
                 .WithMaxItems(1000)
                 .Build();
