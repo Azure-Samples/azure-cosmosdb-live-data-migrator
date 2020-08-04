@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.Cosmos;
-using Microsoft.Azure.Cosmos.Fluent;
 
 namespace MigrationConsoleApp
 {
@@ -28,16 +27,6 @@ namespace MigrationConsoleApp
         {
             TelemetryConfiguration.Active.InstrumentationKey = appInsightsInstrumentationKey;
             new Program().RunAsync().Wait();
-        }
-
-        private static CosmosClient GetCustomClient(string connectionString)
-        {
-            CosmosClientBuilder builder = new CosmosClientBuilder(connectionString)
-                .WithApplicationName("CosmosFunctionsMigration")
-                .WithBulkExecution(true)
-                .WithThrottlingRetryOptions(TimeSpan.FromSeconds(30), 10);
-
-            return builder.Build();
         }
 
         public async Task RunAsync()
