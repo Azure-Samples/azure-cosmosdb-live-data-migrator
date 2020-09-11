@@ -154,7 +154,6 @@
                 Console.WriteLine($"\tDetected operation...");
                 document = (SourcePartitionKeys != null & TargetPartitionKey != null) ? MapPartitionKey(doc, isSyntheticKey, TargetPartitionKey, isNestedAttribute, SourcePartitionKeys) : document = doc;
                 bulkOperations.Tasks.Add(containerToStoreDocuments.CreateItemAsync(item: document, cancellationToken: cancellationToken).CaptureOperationResponse(document));
-                await Task.Delay(1);
             }
             BulkOperationResponse<Document> bulkOperationResponse = await bulkOperations.ExecuteAsync();
             if (bulkOperationResponse.Failures.Count > 0 && containerClient != null)
