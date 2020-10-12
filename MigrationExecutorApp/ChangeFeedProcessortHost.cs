@@ -1,53 +1,55 @@
 ﻿namespace MigrationConsoleApp
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Runtime.Serialization.Json;
+    using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
+    using System.Xml.Linq;
+    using System.Xml.XPath;
     using Azure.Storage.Blobs;
+    using Microsoft.Azure.Cosmos;
     using Microsoft.Azure.Documents;
-    using Microsoft.Azure.Documents.ChangeFeedProcessor;
-    using Microsoft.Azure.Documents.ChangeFeedProcessor.PartitionManagement;
-    using Microsoft.Azure.Documents.Client;
+    using Newtonsoft.Json;
 
     public class ChangeFeedProcessorHost
     {
         private MigrationConfig config;
-        private IChangeFeedProcessor changeFeedProcessor;
-        private DocumentClient destinationCollectionClient;
+        private ChangeFeedProcessor changeFeedProcessor;
+        private static CosmosClient destinationCollectionClient;
+        private static CosmosClient sourceCollectionClient;
+        private static CosmosClient leaseCollectionClient;
+        private static Container containerToStoreDocuments;
+        private readonly string SourcePartitionKeys;
+        private readonly string TargetPartitionKey;
+        BlobContainerClient containerClient = null;
 
-        public DocumentClient GetDestinationCollectionClient()
-        {
-            if (destinationCollectionClient == null)
-            {
-                destinationCollectionClient = new DocumentClient(
-                    new Uri(config.DestUri), config.DestSecretKey,
-                new ConnectionPolicy() { ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp },
-                ConsistencyLevel.Eventual);
-            }
-
-            return destinationCollectionClient;
-        }
 
         public ChangeFeedProcessorHost(MigrationConfig config)
         {
             this.config = config;
+            SourcePartitionKeys = config.SourcePartitionKeys;
+            TargetPartitionKey = config.TargetPartitionKey;
+            leaseCollectionClient = new CosmosClient(config.LeaseUri, config.LeaseSecretKey);
+            sourceCollectionClient = new CosmosClient(config.MonitoredUri, config.MonitoredSecretKey);
+            destinationCollectionClient = new CosmosClient(config.DestUri, config.DestSecretKey, new CosmosClientOptions() { AllowBulkExecution = true });            
+        }
+
+        public CosmosClient GetDestinationCollectionClient()
+        {
+            if (destinationCollectionClient == null)
+            {
+                destinationCollectionClient = new CosmosClient(config.DestUri, config.DestSecretKey, new CosmosClientOptions() { AllowBulkExecution = true });
+            }
+            return destinationCollectionClient;
         }
 
         public async Task StartAsync()
         {
-            Trace.TraceInformation(
-                "Starting monitor(source) collection creation: Url {0} - key {1} - dbName {2} - collectionName {3}",
-                this.config.MonitoredUri,
-                this.config.MonitoredSecretKey,
-                this.config.MonitoredDbName,
-                this.config.MonitoredCollectionName);
-
-            this.CreateCollectionIfNotExistsAsync(
-               this.config.MonitoredUri,
-               this.config.MonitoredSecretKey,
-               this.config.MonitoredDbName,
-               this.config.MonitoredCollectionName,
-               this.config.MonitoredThroughput).Wait();
 
             Trace.TraceInformation(
                 "Starting lease (transaction log of change feed) standard collection creation: Url {0} - key {1} - dbName {2} - collectionName {3}",
@@ -61,7 +63,7 @@
                 this.config.LeaseSecretKey,
                 this.config.LeaseDbName,
                 this.config.LeaseCollectionName,
-                this.config.LeaseThroughput).Wait();
+                this.config.LeaseThroughput, "id").Wait();
 
             Trace.TraceInformation(
                 "destination (sink) collection : Url {0} - key {1} - dbName {2} - collectionName {3}",
@@ -75,21 +77,15 @@
                 this.config.DestSecretKey,
                 this.config.DestDbName,
                 this.config.DestCollectionName,
-                this.config.DestThroughput).Wait();
+                this.config.DestThroughput, config.TargetPartitionKey).Wait();
 
             await this.RunChangeFeedHostAsync();
         }
-        public async Task CreateCollectionIfNotExistsAsync(string endPointUri, string secretKey, string databaseName, string collectionName, int throughput)
-        {
-            using (DocumentClient client = new DocumentClient(new Uri(endPointUri), secretKey))
-            {
-                await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseName });
 
-                await client.CreateDocumentCollectionIfNotExistsAsync(
-                    UriFactory.CreateDatabaseUri(databaseName),
-                    new DocumentCollection() { Id = collectionName },
-                    new RequestOptions { OfferThroughput = throughput });
-            }
+        public async Task CreateCollectionIfNotExistsAsync(string endPointUri, string secretKey, string databaseName, string collectionName, int throughput, string partitionKey)
+        {
+            Microsoft.Azure.Cosmos.Database db = await destinationCollectionClient.CreateDatabaseIfNotExistsAsync(databaseName);
+            containerToStoreDocuments = await db.CreateContainerIfNotExistsAsync(collectionName, "/"+partitionKey);
         }
 
         public async Task CloseAsync()
@@ -108,92 +104,221 @@
             changeFeedProcessor = null;
         }
 
-        public async Task<IChangeFeedProcessor> RunChangeFeedHostAsync()
+        public async Task<ChangeFeedProcessor> RunChangeFeedHostAsync()
         {
             string hostName = Guid.NewGuid().ToString();
             Trace.TraceInformation("Host name {0}", hostName);
 
-            // monitored collection info 
-            var documentCollectionLocation = new DocumentCollectionInfo
-            {
-                Uri = new Uri(this.config.MonitoredUri),
-                MasterKey = this.config.MonitoredSecretKey,
-                DatabaseName = this.config.MonitoredDbName,
-                CollectionName = this.config.MonitoredCollectionName
-            };
-
-            var policy = new ConnectionPolicy()
-            {
-                ConnectionMode = ConnectionMode.Direct,
-                ConnectionProtocol = Protocol.Tcp
-            };
-
-            policy.PreferredLocations.Add("North Europe");
-
-            // lease collection info 
-            var leaseCollectionLocation = new DocumentCollectionInfo
-            {
-                Uri = new Uri(this.config.LeaseUri),
-                MasterKey = this.config.LeaseSecretKey,
-                DatabaseName = this.config.LeaseDbName,
-                CollectionName = this.config.LeaseCollectionName,
-                ConnectionPolicy = policy
-            };
-
-            // destination collection info 
-            var destCollInfo = new DocumentCollectionInfo
-            {
-                Uri = new Uri(this.config.DestUri),
-                MasterKey = this.config.DestSecretKey,
-                DatabaseName = this.config.DestDbName,
-                CollectionName = this.config.DestCollectionName
-            };
-
-            var processorOptions = new ChangeFeedProcessorOptions();
-            if(config.DataAgeInHours.HasValue) {
-                if (config.DataAgeInHours.Value >= 0)
-                {
-                    processorOptions.StartTime = DateTime.UtcNow.Subtract(TimeSpan.FromHours(config.DataAgeInHours.Value));
-                }
-            } else
-            {
-                processorOptions.StartFromBeginning = true;
-            }
-
-            processorOptions.LeaseRenewInterval = TimeSpan.FromSeconds(30);
-
-            Trace.TraceInformation("Processor options Starts from Beginning - {0}, Lease renew interval - {1}",
-                processorOptions.StartFromBeginning,
-                processorOptions.LeaseRenewInterval.ToString());
-
-            processorOptions.MaxItemCount = 1000;
-            var destClient = new DocumentClient(destCollInfo.Uri, destCollInfo.MasterKey,
-                new ConnectionPolicy() { ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp },
-                ConsistencyLevel.Eventual);
-
             var docTransformer = new DefaultDocumentTransformer();
-
-            BlobContainerClient containerClient = null;
-
+          
             if (!String.IsNullOrEmpty(config.BlobConnectionString))
             {
                 BlobServiceClient blobServiceClient = new BlobServiceClient(config.BlobConnectionString);
                 containerClient = blobServiceClient.GetBlobContainerClient(config.BlobContainerName);
                 await containerClient.CreateIfNotExistsAsync();
-            } 
+            }
 
-            var docObserverFactory = new DocumentFeedObserverFactory(config.SourcePartitionKeys, config.TargetPartitionKey, destClient, destCollInfo, docTransformer, containerClient);
+            DateTime starttime = DateTime.MinValue.ToUniversalTime();
+            if (config.DataAgeInHours.HasValue)
+            {
+                if (config.DataAgeInHours.Value >= 0)
+                {
+                    starttime = DateTime.UtcNow.Subtract(TimeSpan.FromHours(config.DataAgeInHours.Value));
+                }
+            }
 
-            changeFeedProcessor = await new ChangeFeedProcessorBuilder()
-                .WithObserverFactory(docObserverFactory)
-                .WithHostName(hostName)
-                .WithFeedCollection(documentCollectionLocation)
-                .WithLeaseCollection(leaseCollectionLocation)
-                .WithProcessorOptions(processorOptions)
-                .WithFeedDocumentClient(new DocumentClient(documentCollectionLocation.Uri, documentCollectionLocation.MasterKey, policy, ConsistencyLevel.Eventual))
-                .BuildAsync();
+            changeFeedProcessor = sourceCollectionClient.GetContainer(config.MonitoredDbName, config.MonitoredCollectionName)
+                .GetChangeFeedProcessorBuilder<Document>("Live Data Migrator", ProcessChangesAsync)
+                .WithInstanceName(hostName)
+                .WithLeaseContainer(leaseCollectionClient.GetContainer(config.LeaseDbName, config.LeaseCollectionName))
+                .WithLeaseConfiguration(TimeSpan.FromSeconds(30))
+                .WithStartTime(starttime)               
+                .WithMaxItems(1000)
+                .Build();
+
             await changeFeedProcessor.StartAsync().ConfigureAwait(false);
+
             return changeFeedProcessor;
         }
+
+        async Task ProcessChangesAsync(IReadOnlyCollection<Document> docs, CancellationToken cancellationToken)
+        {
+            Boolean isSyntheticKey = SourcePartitionKeys.Contains(",");
+            Boolean isNestedAttribute = SourcePartitionKeys.Contains("/");
+            Container targetContainer = destinationCollectionClient.GetContainer(config.DestDbName, config.DestCollectionName);
+            containerToStoreDocuments = targetContainer;
+            Document document;
+            BulkOperations<Document> bulkOperations = new BulkOperations<Document>(docs.Count);
+            foreach (Document doc in docs)
+            {
+                Console.WriteLine($"\tDetected operation...");
+                document = (SourcePartitionKeys != null & TargetPartitionKey != null) ? MapPartitionKey(doc, isSyntheticKey, TargetPartitionKey, isNestedAttribute, SourcePartitionKeys) : document = doc;
+                bulkOperations.Tasks.Add(containerToStoreDocuments.CreateItemAsync(item: document, cancellationToken: cancellationToken).CaptureOperationResponse(document));
+            }
+            BulkOperationResponse<Document> bulkOperationResponse = await bulkOperations.ExecuteAsync();
+            if (bulkOperationResponse.Failures.Count > 0 && containerClient != null)
+            {
+                WriteFailedDocsToBlob("FailedImportDocs", containerClient, bulkOperationResponse);
+            }
+            LogMetrics(bulkOperationResponse);
+        }
+
+
+
+        private static void WriteFailedDocsToBlob(string failureType, BlobContainerClient containerClient, BulkOperationResponse<Document> bulkOperationResponse)
+        {
+            string failedDocs;
+            byte[] byteArray;
+            BlobClient blobClient = containerClient.GetBlobClient(failureType + Guid.NewGuid().ToString() + ".csv");
+
+            failedDocs = JsonConvert.SerializeObject(String.Join(",", bulkOperationResponse.Failures));
+            byteArray = Encoding.ASCII.GetBytes(failureType + ", " + bulkOperationResponse.Failures.Count + "|" + failedDocs);
+
+            using (var ms = new MemoryStream(byteArray))
+            {
+                blobClient.UploadAsync(ms, overwrite: true);
+            }
+        }
+
+        private static void LogMetrics(BulkOperationResponse<Document> bulkOperationResponse)
+        {
+            Program.telemetryClient.TrackMetric("TotalInserted", bulkOperationResponse.SuccessfulDocuments);
+            Program.telemetryClient.TrackMetric("InsertedDocuments-Process:"
+                + Process.GetCurrentProcess().Id, bulkOperationResponse.SuccessfulDocuments);
+            Program.telemetryClient.TrackMetric("TotalRUs", bulkOperationResponse.TotalRequestUnitsConsumed);
+
+            if (bulkOperationResponse.Failures.Count > 0)
+            {
+                Program.telemetryClient.TrackMetric("BadInputDocsCount", bulkOperationResponse.Failures.Count);
+            }
+
+            if (bulkOperationResponse.Failures.Count > 0)
+            {
+                Program.telemetryClient.TrackMetric("FailedImportDocsCount", bulkOperationResponse.Failures.Count);
+            }
+        }
+
+        public static Document MapPartitionKey(Document doc, Boolean isSyntheticKey, string targetPartitionKey, Boolean isNestedAttribute, string sourcePartitionKeys)
+        {
+            if (isSyntheticKey)
+            {
+                doc = CreateSyntheticKey(doc, sourcePartitionKeys, isNestedAttribute, targetPartitionKey);
+            }
+            else
+            {
+                doc.SetPropertyValue(targetPartitionKey, isNestedAttribute == true ? GetNestedValue(doc, sourcePartitionKeys) : doc.GetPropertyValue<string>(sourcePartitionKeys));
+            }
+            return doc;
+        }
+
+        public static Document CreateSyntheticKey(Document doc, string sourcePartitionKeys, Boolean isNestedAttribute, string targetPartitionKey)
+        {
+            StringBuilder syntheticKey = new StringBuilder();
+            string[] sourceAttributeArray = sourcePartitionKeys.Split(',');
+            int arraylength = sourceAttributeArray.Length;
+            int count = 1;
+            foreach (string rawattribute in sourceAttributeArray)
+            {
+                string attribute = rawattribute.Trim();
+                if (count == arraylength)
+                {
+                    string val = isNestedAttribute == true ? GetNestedValue(doc, attribute) : doc.GetPropertyValue<string>(attribute);
+                    syntheticKey.Append(val);
+                }
+                else
+                {
+                    string val = isNestedAttribute == true ? GetNestedValue(doc, attribute) + "-" : doc.GetPropertyValue<string>(attribute) + "-";
+                    syntheticKey.Append(val);
+                }
+                count++;
+            }
+            doc.SetPropertyValue(targetPartitionKey, syntheticKey.ToString());
+            return doc;
+        }
+
+        public static string GetNestedValue(Document doc, string path)
+        {
+            var jsonReader = JsonReaderWriterFactory.CreateJsonReader(Encoding.UTF8.GetBytes(doc.ToString()), new System.Xml.XmlDictionaryReaderQuotas());
+            var root = XElement.Load(jsonReader);
+            string value = root.XPathSelectElement("//" + path).Value;
+            return value;
+        }
+
     }
+
+    public class OperationResponse<T>
+    {
+        public T Item { get; set; }
+        public double RequestUnitsConsumed { get; set; } = 0;
+        public bool IsSuccessful { get; set; }
+        public Exception CosmosException { get; set; }
+
+    }
+    public class BulkOperationResponse<T>
+    {
+        public TimeSpan TotalTimeTaken { get; set; }
+        public int SuccessfulDocuments { get; set; } = 0;
+        public double TotalRequestUnitsConsumed { get; set; } = 0;
+        public IReadOnlyList<(T, Exception)> Failures { get; set; }
+    }
+    public class BulkOperations<T>
+    {
+        public readonly List<Task<OperationResponse<T>>> Tasks;
+        private readonly Stopwatch stopwatch = Stopwatch.StartNew();
+        public BulkOperations(int operationCount)
+        {
+            this.Tasks = new List<Task<OperationResponse<T>>>(operationCount);
+        }
+        public async Task<BulkOperationResponse<T>> ExecuteAsync()
+        {
+            await Task.WhenAll(this.Tasks);
+            this.stopwatch.Stop();
+            return new BulkOperationResponse<T>()
+            {
+                TotalTimeTaken = this.stopwatch.Elapsed,
+                TotalRequestUnitsConsumed = this.Tasks.Sum(task => task.Result.RequestUnitsConsumed),
+                SuccessfulDocuments = this.Tasks.Count(task => task.Result.IsSuccessful),
+                Failures = this.Tasks.Where(task => !task.Result.IsSuccessful).Select(task => (task.Result.Item, task.Result.CosmosException)).ToList()
+            };
+        }
+    }
+    static class CaptureOperation
+    {
+        public static Task<OperationResponse<T>> CaptureOperationResponse<T>(this Task<ItemResponse<T>> task, T item)
+        {
+            return task.ContinueWith(itemResponse =>
+            {
+                if (itemResponse.IsCompleted)
+                {
+                    return new OperationResponse<T>()
+                    {
+                        Item = item,
+                        IsSuccessful = true,
+                        RequestUnitsConsumed = task.Result.RequestCharge
+                    };
+                }
+
+                AggregateException innerExceptions = itemResponse.Exception.Flatten();
+                CosmosException cosmosException = innerExceptions.InnerExceptions.FirstOrDefault(innerEx => innerEx is CosmosException) as CosmosException;
+                if (cosmosException != null)
+                {
+                    return new OperationResponse<T>()
+                    {
+                        Item = item,
+                        RequestUnitsConsumed = cosmosException.RequestCharge,
+                        IsSuccessful = false,
+                        CosmosException = cosmosException
+                    };
+                }
+
+                return new OperationResponse<T>()
+                {
+                    Item = item,
+                    IsSuccessful = false,
+                    CosmosException = innerExceptions.InnerExceptions.FirstOrDefault()
+                };
+            });
+        }
+    }
+
 }

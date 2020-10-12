@@ -1,18 +1,11 @@
-﻿using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Azure.Documents;
-using Microsoft.Azure.Documents.Client;
-using Microsoft.Azure.Documents.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.Azure.Cosmos;
 
 namespace MigrationConsoleApp
 {
@@ -24,8 +17,10 @@ namespace MigrationConsoleApp
         private static string masterkey = ConfigurationManager.AppSettings["cosmosdbkey"];
         private static string jobdb = ConfigurationManager.AppSettings["cosmosdbdb"];
         private static string jobColl = ConfigurationManager.AppSettings["cosmosdbcollection"];
+
         private static string appInsightsInstrumentationKey = ConfigurationManager.AppSettings["appinsightsinstrumentationkey"];
-        private static DocumentClient client = new DocumentClient(new Uri(endpoint), masterkey);
+
+        private static CosmosClient client = new CosmosClient(endpoint,masterkey);
         private string currentMigrationId = null;
         private ChangeFeedProcessorHost changeFeedProcessorHost = null;
         static void Main(string[] args)
@@ -36,17 +31,19 @@ namespace MigrationConsoleApp
 
         public async Task RunAsync()
         {
-            var db = await client.CreateDatabaseIfNotExistsAsync(new Database() { Id = jobdb });
-            await client.CreateDocumentCollectionIfNotExistsAsync(db.Resource.SelfLink, new DocumentCollection() { Id = jobColl });
+
+            Database db = await client.CreateDatabaseIfNotExistsAsync(jobdb);            
+
+            Container container = await db.CreateContainerIfNotExistsAsync(new ContainerProperties(jobColl, "/_partitionKey"));
 
             while (true) {
                 // Check if a migration doc got inserted in the last hour
                 if (currentMigrationId == null) {
-                    var option = new FeedOptions { EnableCrossPartitionQuery = true };
-                    var configDocs = client.CreateDocumentQuery<MigrationConfig>(UriFactory.CreateDocumentCollectionUri(jobdb, jobColl),
-                        string.Format("select * from c where NOT c.completed"), option).AsEnumerable<MigrationConfig>().ToList();
 
-                    if (configDocs.Count == 0) {
+                    var configDocs = container.GetItemQueryIterator<MigrationConfig>("select * from c where NOT c.completed").ReadNextAsync().Result.AsEnumerable<MigrationConfig>().ToList();
+
+                    if (configDocs.Count == 0)
+                    {
                         Console.WriteLine("No job for process: " + Process.GetCurrentProcess().Id);
                         await Task.Delay(5000);
                         continue;
@@ -58,9 +55,8 @@ namespace MigrationConsoleApp
                     await changeFeedProcessorHost.StartAsync();
                 } else
                 {
-                    var option = new FeedOptions { EnableCrossPartitionQuery = true };
-                    var configDocs = client.CreateDocumentQuery<MigrationConfig>(UriFactory.CreateDocumentCollectionUri(jobdb, jobColl),
-                        string.Format("select * from c where c.id = \"{0}\"", currentMigrationId), option).AsEnumerable<MigrationConfig>().ToList();
+                    var configDocs = container.GetItemQueryIterator<MigrationConfig>(string.Format("select * from c where c.id = \"{0}\"", currentMigrationId)).ReadNextAsync().Result.AsEnumerable<MigrationConfig>().ToList();
+
                     if (configDocs.Count == 0 || configDocs.First().Completed)
                     {
                         Console.WriteLine("Current Migration is completed or deleted, closing migration " + Process.GetCurrentProcess().Id);
