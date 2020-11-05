@@ -7,6 +7,7 @@
     using System.Linq;
     using System.Runtime.Serialization.Json;
     using System.Text;
+    using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
     using System.Xml.Linq;
@@ -158,6 +159,7 @@
             BulkOperationResponse<Document> bulkOperationResponse = await bulkOperations.ExecuteAsync();
             if (bulkOperationResponse.Failures.Count > 0 && containerClient != null)
             {
+                Console.WriteLine($"\tFailed docs!");
                 WriteFailedDocsToBlob("FailedImportDocs", containerClient, bulkOperationResponse);
             }
             LogMetrics(bulkOperationResponse);
@@ -168,15 +170,18 @@
         private static void WriteFailedDocsToBlob(string failureType, BlobContainerClient containerClient, BulkOperationResponse<Document> bulkOperationResponse)
         {
             string failedDocs;
+            string failures;
             byte[] byteArray;
             BlobClient blobClient = containerClient.GetBlobClient(failureType + Guid.NewGuid().ToString() + ".csv");
 
-            failedDocs = JsonConvert.SerializeObject(String.Join(",", bulkOperationResponse.Failures));
-            byteArray = Encoding.ASCII.GetBytes(failureType + ", " + bulkOperationResponse.Failures.Count + "|" + failedDocs);
+            failures = JsonConvert.SerializeObject(String.Join(",", bulkOperationResponse.DocFailures));
+            failedDocs = JsonConvert.SerializeObject(String.Join(",", bulkOperationResponse.FailedDocs));
+            failedDocs = Regex.Replace(failedDocs, @"\\r\\n?|\\n?|\\\?|\\", "");
+            byteArray = Encoding.ASCII.GetBytes(failures + ", " + bulkOperationResponse.Failures.Count + "|" + failedDocs);
 
             using (var ms = new MemoryStream(byteArray))
             {
-                blobClient.UploadAsync(ms, overwrite: true);
+                blobClient.Upload(ms, overwrite: true);
             }
         }
 
@@ -259,6 +264,8 @@
         public TimeSpan TotalTimeTaken { get; set; }
         public int SuccessfulDocuments { get; set; } = 0;
         public double TotalRequestUnitsConsumed { get; set; } = 0;
+        public IReadOnlyList<T> FailedDocs { get; set; }
+        public IReadOnlyList<string> DocFailures { get; set; }
         public IReadOnlyList<(T, Exception)> Failures { get; set; }
     }
     public class BulkOperations<T>
@@ -278,6 +285,8 @@
                 TotalTimeTaken = this.stopwatch.Elapsed,
                 TotalRequestUnitsConsumed = this.Tasks.Sum(task => task.Result.RequestUnitsConsumed),
                 SuccessfulDocuments = this.Tasks.Count(task => task.Result.IsSuccessful),
+                FailedDocs = this.Tasks.Where(task => !task.Result.IsSuccessful).Select(task => (task.Result.Item)).ToList(),
+                DocFailures = this.Tasks.Where(task => !task.Result.IsSuccessful).Select(task => (task.Result.CosmosException.Message)).ToList(),
                 Failures = this.Tasks.Where(task => !task.Result.IsSuccessful).Select(task => (task.Result.Item, task.Result.CosmosException)).ToList()
             };
         }
@@ -288,7 +297,7 @@
         {
             return task.ContinueWith(itemResponse =>
             {
-                if (itemResponse.IsCompleted)
+                if (itemResponse.IsCompleted && itemResponse.Exception == null)
                 {
                     return new OperationResponse<T>()
                     {
