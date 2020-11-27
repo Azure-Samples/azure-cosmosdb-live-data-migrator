@@ -50,11 +50,9 @@ You will then be presented will some fields you need to populate for the deploym
 
 - Add the Cosmos DB connection details for Lease DB, which is used in the ChangeFeed process. The lease collection, if partitioned, must have partition key column named as "id".
 
-- [Optional] Add the Azure Blob Connection string and Container Name to store the failed / bad records. The complete records would be stored in this Container and can be used for point inserts.
+- Add "Target Partition Key Attribute". This should be the path to the partition key field in the target collection. If the "Source Partition Key Attribute(s)" (see below) is left blank, then it is assumed that partition key in source and target collection are identical, and no mapping will be applied.
 
-- [Optional] Maximum data age in hours is used to derive the starting point of time to read from source container. In other words, it starts looking for changes after [currenttime - given number of hours] in source. The data migration starts from beginning if this parameter is not specified.
-
-- [Optional] The "Source Partition Key Attributes" and "Target Partition Key Attribute" fields are used for mapping partition key attributes from your source collection to your target collection. For example, if you want to have a dedicated or synthetic partition key in your new collection named "partitionKey", and this will be populated from "deviceId", you should enter `deviceId` in "Source Partition Key Attributes" field, and `partitionKey` in the "Target Partition Key" field. You can also add multiple fields separated by a comma to map a synthetic key, e.g. add `deviceId,timestamp` in the "Source Partition Key Attribute(s)" field. Nested source fields are also supported, for example `Parent1/Child1,Parent2/Child2`. If you want to select an item in an array, for example:
+- [Optional] The "Source Partition Key Attribute(s)" field is used for mapping partition key attributes from your source collection to your target collection. For example, if you want to have a dedicated or synthetic partition key in your new (target) collection named "partitionKey", and this will be populated from "deviceId" in your source collection, you should enter `deviceId` in "Source Partition Key Attributes" field, and `partitionKey` in the "Target Partition Key Attribute" field. You can also add multiple fields separated by a comma to map a synthetic key, e.g. add `deviceId,timestamp` in the "Source Partition Key Attribute(s)" field. Nested source fields are also supported, for example `Parent1/Child1,Parent2/Child2`. If you want to select an item in an array, for example:
 
 	```json
 		{
@@ -69,7 +67,11 @@ You will then be presented will some fields you need to populate for the deploym
 			]
 		}
 	```
-	You can use xpath syntax, e.g. `parent/item[1]/child`. In all cases of synthetic partition key mapping, these will be separated with a dash when mapped to the target collection, e.g. `value1-value2`. If no mapping is required, as there is no dedicated partition key field in your source or target collection, you can leave these fields blank.
+	You can use xpath syntax, e.g. `parent/item[1]/child`. In all cases of synthetic partition key mapping, these will be separated with a dash when mapped to the target collection, e.g. `value1-value2`. If no mapping is required, as there is no dedicated partition key field in your source or target collection, you can leave this field blank (but you must still enter the target collection's partition key field in "Target Partition Key Attribute").
+
+- [Optional] Add the Azure Blob Connection string and Container Name to store the failed / bad records. The complete records would be stored in this Container and can be used for point inserts.
+
+- [Optional] Maximum data age in hours is used to derive the starting point of time to read from source container. In other words, it starts looking for changes after [currenttime - given number of hours] in source. The data migration starts from beginning if this parameter is not specified.
  
 ![Migrationdetails](images/migrationdetails.png)
 
