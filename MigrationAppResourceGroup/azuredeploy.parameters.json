@@ -18,10 +18,10 @@
       "value": ""
     },
     "clientpackagelocation": {
-      "value": "https://nomiereastusdiag579.blob.core.windows.net/migrationservice/clientapp.zip"
+      "value": "https://fabianmstorage.blob.core.windows.net/migration-tool/2020-11-27_0001/clientApp.zip"
     },
     "migrationjoblocation": {
-      "value": "https://nomiereastusdiag579.blob.core.windows.net/migrationservice/webjobs.zip"
+      "value": "https://fabianmstorage.blob.core.windows.net/migration-tool/2020-11-27_0001/webjobs.zip"
     },
     "appinsightsname": {
       "value": "migrationinsights"

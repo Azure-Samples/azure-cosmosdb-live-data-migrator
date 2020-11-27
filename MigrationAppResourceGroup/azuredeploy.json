@@ -19,11 +19,11 @@
     },
     "clientpackagelocation": {
       "type": "String",
-      "defaultValue": "https://revin.blob.core.windows.net/azure-cosmosdb-live-data-migrator/clientApp.zip"
+      "defaultValue": "https://fabianmstorage.blob.core.windows.net/migration-tool/2020-11-27_0001/clientApp.zip"
     },
     "migrationjoblocation": {
       "type": "String",
-      "defaultValue": "https://revin.blob.core.windows.net/azure-cosmosdb-live-data-migrator/webjobs.zip"
+      "defaultValue": "https://fabianmstorage.blob.core.windows.net/migration-tool/2020-11-27_0001/webjobs.zip"
     },
     "appinsightsname": {
       "type": "String"
