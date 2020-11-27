@@ -1,4 +1,4 @@
-﻿namespace MigrationConsoleApp
+namespace MigrationConsoleApp
 {
     using System;
     using System.Collections.Generic;
@@ -37,7 +37,7 @@
             TargetPartitionKey = config.TargetPartitionKey;
             leaseCollectionClient = new CosmosClient(config.LeaseUri, config.LeaseSecretKey);
             sourceCollectionClient = new CosmosClient(config.MonitoredUri, config.MonitoredSecretKey);
-            destinationCollectionClient = new CosmosClient(config.DestUri, config.DestSecretKey, new CosmosClientOptions() { AllowBulkExecution = true });
+            destinationCollectionClient = new CosmosClient(config.DestUri, config.DestSecretKey, new CosmosClientOptions() { AllowBulkExecution = true });            
         }
 
         public CosmosClient GetDestinationCollectionClient()
@@ -86,17 +86,17 @@
         public async Task CreateCollectionIfNotExistsAsync(string endPointUri, string secretKey, string databaseName, string collectionName, int throughput, string partitionKey)
         {
             Microsoft.Azure.Cosmos.Database db = await destinationCollectionClient.CreateDatabaseIfNotExistsAsync(databaseName);
-            containerToStoreDocuments = await db.CreateContainerIfNotExistsAsync(collectionName, "/" + partitionKey);
+            containerToStoreDocuments = await db.CreateContainerIfNotExistsAsync(collectionName, "/"+partitionKey);
         }
 
         public async Task CloseAsync()
         {
-            if (GetDestinationCollectionClient() != null)
+            if(GetDestinationCollectionClient() != null )
             {
                 GetDestinationCollectionClient().Dispose();
             }
 
-            if (changeFeedProcessor != null)
+            if(changeFeedProcessor != null)
             {
                 await changeFeedProcessor.StopAsync();
             }
@@ -111,7 +111,7 @@
             Trace.TraceInformation("Host name {0}", hostName);
 
             var docTransformer = new DefaultDocumentTransformer();
-
+          
             if (!String.IsNullOrEmpty(config.BlobConnectionString))
             {
                 BlobServiceClient blobServiceClient = new BlobServiceClient(config.BlobConnectionString);
@@ -133,7 +133,7 @@
                 .WithInstanceName(hostName)
                 .WithLeaseContainer(leaseCollectionClient.GetContainer(config.LeaseDbName, config.LeaseCollectionName))
                 .WithLeaseConfiguration(TimeSpan.FromSeconds(30))
-                .WithStartTime(starttime)
+                .WithStartTime(starttime)               
                 .WithMaxItems(1000)
                 .Build();
 
