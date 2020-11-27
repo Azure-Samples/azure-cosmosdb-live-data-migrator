@@ -152,17 +152,20 @@ namespace MigrationConsoleApp
             BulkOperations<Document> bulkOperations = new BulkOperations<Document>(docs.Count);
             foreach (Document doc in docs)
             {
-                Console.WriteLine($"\tDetected operation...");
-                document = (SourcePartitionKeys != null & TargetPartitionKey != null) ? MapPartitionKey(doc, isSyntheticKey, TargetPartitionKey, isNestedAttribute, SourcePartitionKeys) : document = doc;
-                bulkOperations.Tasks.Add(containerToStoreDocuments.CreateItemAsync(item: document, cancellationToken: cancellationToken).CaptureOperationResponse(document));
+                //Console.WriteLine($"\tDetected operation...");                
+                document = (SourcePartitionKeys != null & (!(SourcePartitionKeys.Equals("")))) ? MapPartitionKey(doc, isSyntheticKey, TargetPartitionKey, isNestedAttribute, SourcePartitionKeys) : document = doc;
+                bulkOperations.Tasks.Add(containerToStoreDocuments.UpsertItemAsync(item: document, cancellationToken: cancellationToken).CaptureOperationResponse(document));
             }
             BulkOperationResponse<Document> bulkOperationResponse = await bulkOperations.ExecuteAsync();
             if (bulkOperationResponse.Failures.Count > 0 && containerClient != null)
             {
+                Console.WriteLine($"\tFailed docs!");
                 WriteFailedDocsToBlob("FailedImportDocs", containerClient, bulkOperationResponse);
             }
             LogMetrics(bulkOperationResponse);
         }
+
+
 
         private static void WriteFailedDocsToBlob(string failureType, BlobContainerClient containerClient, BulkOperationResponse<Document> bulkOperationResponse)
         {
