@@ -37,7 +37,7 @@
             TargetPartitionKey = config.TargetPartitionKey;
             leaseCollectionClient = new CosmosClient(config.LeaseUri, config.LeaseSecretKey);
             sourceCollectionClient = new CosmosClient(config.MonitoredUri, config.MonitoredSecretKey);
-            destinationCollectionClient = new CosmosClient(config.DestUri, config.DestSecretKey, new CosmosClientOptions() { AllowBulkExecution = true });            
+            destinationCollectionClient = new CosmosClient(config.DestUri, config.DestSecretKey, new CosmosClientOptions() { AllowBulkExecution = true });
         }
 
         public CosmosClient GetDestinationCollectionClient()
@@ -86,17 +86,17 @@
         public async Task CreateCollectionIfNotExistsAsync(string endPointUri, string secretKey, string databaseName, string collectionName, int throughput, string partitionKey)
         {
             Microsoft.Azure.Cosmos.Database db = await destinationCollectionClient.CreateDatabaseIfNotExistsAsync(databaseName);
-            containerToStoreDocuments = await db.CreateContainerIfNotExistsAsync(collectionName, "/"+partitionKey);
+            containerToStoreDocuments = await db.CreateContainerIfNotExistsAsync(collectionName, "/" + partitionKey);
         }
 
         public async Task CloseAsync()
         {
-            if(GetDestinationCollectionClient() != null )
+            if (GetDestinationCollectionClient() != null)
             {
                 GetDestinationCollectionClient().Dispose();
             }
 
-            if(changeFeedProcessor != null)
+            if (changeFeedProcessor != null)
             {
                 await changeFeedProcessor.StopAsync();
             }
@@ -111,7 +111,7 @@
             Trace.TraceInformation("Host name {0}", hostName);
 
             var docTransformer = new DefaultDocumentTransformer();
-          
+
             if (!String.IsNullOrEmpty(config.BlobConnectionString))
             {
                 BlobServiceClient blobServiceClient = new BlobServiceClient(config.BlobConnectionString);
@@ -133,7 +133,7 @@
                 .WithInstanceName(hostName)
                 .WithLeaseContainer(leaseCollectionClient.GetContainer(config.LeaseDbName, config.LeaseCollectionName))
                 .WithLeaseConfiguration(TimeSpan.FromSeconds(30))
-                .WithStartTime(starttime)               
+                .WithStartTime(starttime)
                 .WithMaxItems(1000)
                 .Build();
 
@@ -152,20 +152,17 @@
             BulkOperations<Document> bulkOperations = new BulkOperations<Document>(docs.Count);
             foreach (Document doc in docs)
             {
-                //Console.WriteLine($"\tDetected operation...");                
-                document = (SourcePartitionKeys != null & (!(SourcePartitionKeys.Equals("")))) ? MapPartitionKey(doc, isSyntheticKey, TargetPartitionKey, isNestedAttribute, SourcePartitionKeys) : document = doc;
-                bulkOperations.Tasks.Add(containerToStoreDocuments.UpsertItemAsync(item: document, cancellationToken: cancellationToken).CaptureOperationResponse(document));
+                Console.WriteLine($"\tDetected operation...");
+                document = (SourcePartitionKeys != null & TargetPartitionKey != null) ? MapPartitionKey(doc, isSyntheticKey, TargetPartitionKey, isNestedAttribute, SourcePartitionKeys) : document = doc;
+                bulkOperations.Tasks.Add(containerToStoreDocuments.CreateItemAsync(item: document, cancellationToken: cancellationToken).CaptureOperationResponse(document));
             }
             BulkOperationResponse<Document> bulkOperationResponse = await bulkOperations.ExecuteAsync();
             if (bulkOperationResponse.Failures.Count > 0 && containerClient != null)
             {
-                Console.WriteLine($"\tFailed docs!");
                 WriteFailedDocsToBlob("FailedImportDocs", containerClient, bulkOperationResponse);
             }
             LogMetrics(bulkOperationResponse);
         }
-
-
 
         private static void WriteFailedDocsToBlob(string failureType, BlobContainerClient containerClient, BulkOperationResponse<Document> bulkOperationResponse)
         {
