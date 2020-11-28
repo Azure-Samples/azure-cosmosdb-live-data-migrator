@@ -19,11 +19,11 @@
     },
     "clientpackagelocation": {
       "type": "String",
-      "defaultValue": "https://revin.blob.core.windows.net/azure-cosmosdb-live-data-migrator/clientApp.zip"
+      "defaultValue": "https://github.com/TheovanKraay/live-data-migrator-deploy/blob/master/clientApp.zip?raw=true"
     },
     "migrationjoblocation": {
       "type": "String",
-      "defaultValue": "https://revin.blob.core.windows.net/azure-cosmosdb-live-data-migrator/webjobs.zip"
+      "defaultValue": "https://github.com/TheovanKraay/live-data-migrator-deploy/blob/master/webjobs.zip?raw=true"
     },
     "appinsightsname": {
       "type": "String"
