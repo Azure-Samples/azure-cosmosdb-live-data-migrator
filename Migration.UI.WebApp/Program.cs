@@ -18,35 +18,33 @@ namespace Migration.UI.WebApp
     {
         public const string WebAppUserAgentPrefix = "MigrationUI.MigrationMetadata";
         public const string SourceClientUserAgentPrefix = "MigrationUI.Source";
-        private static readonly string keyVaultUri = Environment.GetEnvironmentVariable("keyvaulturi");
-        private static readonly string migrationMetadataAccount = Environment.GetEnvironmentVariable("cosmosdbaccount");
-        private static readonly string jobdb = Environment.GetEnvironmentVariable("cosmosdbdb");
-        private static readonly string jobColl = Environment.GetEnvironmentVariable("cosmosdbcollection");
-        private static readonly string appInsightsInstrumentationKey =
-            Environment.GetEnvironmentVariable("appinsightsinstrumentationkey");
-        private static readonly string defaultSourceAccount =
-            Environment.GetEnvironmentVariable("defaultsourceaccount");
-        private static readonly string defaultDestinationAccount =
-            Environment.GetEnvironmentVariable("defaultdestinationaccount");
 
         public static void Main(string[] args)
         {
-            TelemetryConfiguration telemetryConfig = new TelemetryConfiguration(appInsightsInstrumentationKey);
+            EnvironmentConfig.Initialize();
+
+            _ = EnvironmentConfig.Singleton.TenantId;
+            _ = EnvironmentConfig.Singleton.AllowedUsers;
+
+            TelemetryConfiguration telemetryConfig = new TelemetryConfiguration(
+                EnvironmentConfig.Singleton.AppInsightsInstrumentationKey);
             TelemetryHelper.Initilize(telemetryConfig);
 
-            KeyVaultHelper.Initialize(new Uri(keyVaultUri), new DefaultAzureCredential());
+            KeyVaultHelper.Initialize(new Uri(EnvironmentConfig.Singleton.KeyVaultUri), new DefaultAzureCredential());
 
             using (CosmosClient client =
                 KeyVaultHelper.Singleton.CreateCosmosClientFromKeyVault(
-                    migrationMetadataAccount,
+                    EnvironmentConfig.Singleton.MigrationMetadataCosmosAccountName,
                     WebAppUserAgentPrefix,
                     useBulk: false,
                     retryOn429Forever: true))
             {
                 MigrationConfigDal.Initialize(
-                    client.GetContainer(jobdb, jobColl),
-                    defaultSourceAccount,
-                    defaultDestinationAccount);
+                    client.GetContainer(
+                        EnvironmentConfig.Singleton.MigrationMetadataDatabaseName,
+                        EnvironmentConfig.Singleton.MigrationMetadataContainerName),
+                    EnvironmentConfig.Singleton.DefaultSourceAccount,
+                    EnvironmentConfig.Singleton.DefaultDestinationAccount);
 
                 CreateHostBuilder(args).Build().Run();
             }

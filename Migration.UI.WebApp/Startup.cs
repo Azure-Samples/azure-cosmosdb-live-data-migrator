@@ -1,3 +1,5 @@
+using System;
+using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.AzureAD.UI;
 using Microsoft.AspNetCore.Authorization;
@@ -29,11 +31,18 @@ namespace Migration.UI.WebApp
             {
                 AuthorizationPolicy policy = new AuthorizationPolicyBuilder()
                     .RequireAuthenticatedUser()
+                    .AddRequirements(new MigrationAppUserRequirement(
+                        EnvironmentConfig.Singleton.TenantId,
+                        EnvironmentConfig.Singleton.AllowedUsers))
                     .Build();
                 options.Filters.Add(new AuthorizeFilter(policy));
             });
 
-            services.AddMvc().AddRazorPagesOptions(options => options.Conventions.AddPageRoute("/Migrations", ""));
+            services.AddSingleton<IAuthorizationHandler, MigrationAppUserHandler>();
+
+            services
+                .AddMvc()
+                .AddRazorPagesOptions(options => options.Conventions.AddPageRoute("/Migrations", ""));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
