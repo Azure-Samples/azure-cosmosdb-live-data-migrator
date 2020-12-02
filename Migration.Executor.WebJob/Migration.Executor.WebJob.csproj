@@ -21,4 +21,8 @@
     <ProjectReference Include="..\Migration.Shared\Migration.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
 </Project>
