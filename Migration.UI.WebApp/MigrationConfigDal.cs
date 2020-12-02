@@ -12,12 +12,7 @@ namespace Migration.UI.WebApp
     public class MigrationConfigDal
     {
         private static MigrationConfigDal singletonInstance;
-
         private readonly Container container;
-
-        private readonly CosmosClient defaultSourceClient;
-
-        private List<string> defaultSourceDatabases;
 
         private MigrationConfigDal(
             Container container,
@@ -27,15 +22,6 @@ namespace Migration.UI.WebApp
             this.container = container;
             this.DefaultSourceAccount = defaultSourceAccount;
             this.DefaultDestinationAccount = defaultDestinationAccount;
-
-            if (!string.IsNullOrWhiteSpace(defaultSourceAccount))
-            {
-                this.defaultSourceClient = KeyVaultHelper.Singleton.CreateCosmosClientFromKeyVault(
-                    defaultSourceAccount,
-                    Program.SourceClientUserAgentPrefix,
-                    useBulk: false,
-                    retryOn429Forever: false);
-            }
         }
 
         public static MigrationConfigDal Singleton
@@ -73,110 +59,109 @@ namespace Migration.UI.WebApp
 
         public async Task<List<MigrationConfig>> GetActiveMigrationsAsync()
         {
-            FeedResponse<MigrationConfig> response = await this.container
-                      .GetItemQueryIterator<MigrationConfig>("select * from c where NOT c.completed")
-                      .ReadNextAsync()
-                      .ConfigureAwait(false);
+            try
+            {
+                FeedResponse<MigrationConfig> response = await this.container
+                          .GetItemQueryIterator<MigrationConfig>("select * from c where NOT c.completed")
+                          .ReadNextAsync()
+                          .ConfigureAwait(false);
 
-            return response.AsEnumerable<MigrationConfig>().ToList();
+                return response.AsEnumerable<MigrationConfig>().ToList();
+            }
+            catch (Exception error)
+            {
+                TelemetryHelper.Singleton.LogError(
+                    "MigrationConfigDal.GetActiveMigrationsAsync failed: {0}",
+                    error);
+
+                throw;
+            }
         }
 
         public async Task<MigrationConfig> GetMigrationAsync(string id)
         {
-            return await this.container
-                .ReadItemAsync<MigrationConfig>(id, new PartitionKey(id))
-                .ConfigureAwait(false);
+            try
+            {
+                return await this.container
+                    .ReadItemAsync<MigrationConfig>(id, new PartitionKey(id))
+                    .ConfigureAwait(false);
+            }
+            catch (Exception error)
+            {
+                TelemetryHelper.Singleton.LogError(
+                    "MigrationConfigDal.GetMigrationAsync({0}) failed: {1}",
+                    id,
+                    error);
+
+                throw;
+            }
         }
 
         public async Task<MigrationConfig> CreateMigrationAsync(MigrationConfig config)
         {
-            return await this.container
-                .CreateItemAsync<MigrationConfig>(config, new PartitionKey(config.Id))
-                .ConfigureAwait(false);
+            try
+            {
+                return await this.container
+                    .CreateItemAsync<MigrationConfig>(config, new PartitionKey(config.Id))
+                    .ConfigureAwait(false);
+            }
+            catch (Exception error)
+            {
+                TelemetryHelper.Singleton.LogError(
+                    "MigrationConfigDal.CreateMigrationAsync for document with id {0} failed: {1}",
+                    config.Id,
+                    error);
+
+                throw;
+            }
         }
 
         public async Task<MigrationConfig> CompleteMigrationAsync(string id)
         {
-            while (true)
+            try
             {
-                MigrationConfig config = await this.GetMigrationAsync(id).ConfigureAwait(false);
-
-                if (config.Completed)
+                while (true)
                 {
-                    return config;
-                }
+                    MigrationConfig config = await this.GetMigrationAsync(id).ConfigureAwait(false);
 
-                config.Completed = true;
-
-                try
-                {
-                    return await this.container
-                        .ReplaceItemAsync<MigrationConfig>(
-                            config,
-                            config.Id,
-                            new PartitionKey(config.Id),
-                            new ItemRequestOptions
-                            {
-                                IfMatchEtag = config.ETag,
-                            })
-                        .ConfigureAwait(false);
-                }
-                catch (CosmosException error)
-                {
-                    if (error.StatusCode == HttpStatusCode.PreconditionFailed)
+                    if (config.Completed)
                     {
-                        continue;
+                        return config;
+                    }
+
+                    config.Completed = true;
+
+                    try
+                    {
+                        return await this.container
+                            .ReplaceItemAsync<MigrationConfig>(
+                                config,
+                                config.Id,
+                                new PartitionKey(config.Id),
+                                new ItemRequestOptions
+                                {
+                                    IfMatchEtag = config.ETag,
+                                })
+                            .ConfigureAwait(false);
+                    }
+                    catch (CosmosException error)
+                    {
+                        if (error.StatusCode == HttpStatusCode.PreconditionFailed)
+                        {
+                            continue;
+                        }
                     }
                 }
             }
-        }
-
-        public async Task<IList<string>> GetTermsOfDefaultSource()
-        {
-            if (this.defaultSourceDatabases != null)
+            catch (Exception error)
             {
-                return this.defaultSourceDatabases;
+                TelemetryHelper.Singleton.LogError(
+                    "MigrationConfigDal.CompleteMigrationAsync({0}) failed: {1}",
+                    id,
+                    error);
+
+                throw;
             }
-
-            if (this.defaultSourceClient == null)
-            {
-                return this.defaultSourceDatabases = new List<string>();
-            }
-
-            HashSet<string> sourceDatabases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            FeedIterator<string> iterator = 
-                this.defaultSourceClient.GetDatabaseQueryIterator<string>("select VALUE(c.id) from c");
-            while (iterator.HasMoreResults)
-            {
-                FeedResponse<string> response = await iterator.ReadNextAsync().ConfigureAwait(false);
-                foreach (string database in response)
-                {
-                    sourceDatabases.Add(database);
-                }
-            }
-
-            HashSet<string> terms = new HashSet<string>(sourceDatabases, StringComparer.OrdinalIgnoreCase);
-            foreach (string dbName in sourceDatabases)
-            {
-                Database db = this.defaultSourceClient.GetDatabase(dbName);
-
-                FeedIterator<string> containerIterator =
-                    db.GetContainerQueryIterator<string>("select VALUE(ci.id) from c");
-                while (containerIterator.HasMoreResults)
-                {
-                    FeedResponse<string> response = await containerIterator.ReadNextAsync().ConfigureAwait(false);
-                    foreach (string container in response)
-                    {
-                        terms.Add(container);
-                    }
-                }
-            }
-
-            List<string> results = terms.ToList();
-            results.Sort();
-
-            return this.defaultSourceDatabases = results;
         }
     }
 }

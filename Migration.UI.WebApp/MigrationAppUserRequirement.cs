@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+using Migration.Shared;
 
 namespace Migration.UI.WebApp
 {
@@ -15,17 +16,32 @@ namespace Migration.UI.WebApp
             if (String.IsNullOrWhiteSpace(tenantId)) { throw new ArgumentNullException(nameof(tenantId)); }
             if (String.IsNullOrWhiteSpace(allowedUsers)) { throw new ArgumentNullException(nameof(allowedUsers)); }
 
-            this.TrustedIssuer =
-                String.Format(CultureInfo.InvariantCulture, "https://sts.windows.net/{0}/", tenantId);
-            this.users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (string user in allowedUsers.Split('|'))
+            try
             {
-                if (String.IsNullOrWhiteSpace(user))
+                this.TrustedIssuer =
+                    String.Format(CultureInfo.InvariantCulture, "https://sts.windows.net/{0}/", tenantId);
+                this.users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string user in allowedUsers.Split('|'))
                 {
-                    continue;
-                }
+                    if (String.IsNullOrWhiteSpace(user))
+                    {
+                        continue;
+                    }
 
-                this.users.Add(user.Trim());
+                    this.users.Add(user.Trim());
+                }
+            }
+            catch (Exception error)
+            {
+                TelemetryHelper.Singleton.LogError(
+                    "Initialization of the {0} used for authorization failed. Provided " +
+                        "tenantId '{1}' or allowed users list '{2}' are most likely incorrect. {3}",
+                    nameof(MigrationAppUserRequirement),
+                    tenantId,
+                    allowedUsers,
+                    error);
+
+                throw;
             }
         }
 

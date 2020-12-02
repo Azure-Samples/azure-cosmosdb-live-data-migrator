@@ -1,15 +1,14 @@
-﻿using Azure.Identity;
-using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Azure.Cosmos;
-using Migration.Shared;
-using Migration.Shared.DataContracts;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Identity;
+using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.Azure.Cosmos;
+using Migration.Shared;
+using Migration.Shared.DataContracts;
 
 namespace Migration.Monitor.WebJob
 {

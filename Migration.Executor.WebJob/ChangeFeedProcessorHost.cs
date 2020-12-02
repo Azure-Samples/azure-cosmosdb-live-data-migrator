@@ -75,31 +75,42 @@ namespace Migration.Executor.WebJob
 
         public async Task StartAsync()
         {
-             TelemetryHelper.Singleton.LogInfo(
-                "Starting lease (transaction log of change feed) standard collection creation: Url {0} - dbName {1} - collectionName {2}",
-                this.config.LeaseAccount,
-                this.config.LeaseDbName,
-                this.config.LeaseCollectionName);
+            try
+            {
+                 TelemetryHelper.Singleton.LogInfo(
+                    "Starting lease (transaction log of change feed) standard collection creation: Url {0} - dbName {1} - collectionName {2}",
+                    this.config.LeaseAccount,
+                    this.config.LeaseDbName,
+                    this.config.LeaseCollectionName);
 
-            await this.CreateCollectionIfNotExistsAsync(
-                this.leaseCollectionClient,
-                this.config.LeaseDbName,
-                this.config.LeaseCollectionName,
-                "id").ConfigureAwait(false);
+                await this.CreateCollectionIfNotExistsAsync(
+                    this.leaseCollectionClient,
+                    this.config.LeaseDbName,
+                    this.config.LeaseCollectionName,
+                    "id").ConfigureAwait(false);
 
-            TelemetryHelper.Singleton.LogInfo(
-                "destination (sink) collection : Url {0} - key {1} - dbName {2} - collectionName {3}",
-                this.config.LeaseAccount,
-                this.config.DestDbName,
-                this.config.DestCollectionName);
+                TelemetryHelper.Singleton.LogInfo(
+                    "destination (sink) collection : Url {0} - key {1} - dbName {2} - collectionName {3}",
+                    this.config.LeaseAccount,
+                    this.config.DestDbName,
+                    this.config.DestCollectionName);
 
-            this.containerToStoreDocuments = await this.CreateCollectionIfNotExistsAsync(
-                this.destinationCollectionClient,
-                this.config.DestDbName,
-                this.config.DestCollectionName,
-                this.config.TargetPartitionKey).ConfigureAwait(false);
+                this.containerToStoreDocuments = await this.CreateCollectionIfNotExistsAsync(
+                    this.destinationCollectionClient,
+                    this.config.DestDbName,
+                    this.config.DestCollectionName,
+                    this.config.TargetPartitionKey).ConfigureAwait(false);
 
-            await this.RunChangeFeedHostAsync().ConfigureAwait(false);
+                await this.RunChangeFeedHostAsync().ConfigureAwait(false);
+            }
+            catch (Exception error)
+            {
+                TelemetryHelper.Singleton.LogError(
+                    "Attempt to start the changefeed processor failed: {0}",
+                    error);
+
+                throw;
+            }
         }
 
         public async Task<Container> CreateCollectionIfNotExistsAsync(
@@ -186,27 +197,38 @@ namespace Migration.Executor.WebJob
 
         async Task ProcessChangesAsync(IReadOnlyCollection<DocumentMetadata> docs, CancellationToken cancellationToken)
         {
-            Boolean isSyntheticKey = this.SourcePartitionKeys.Contains(",");
-            Boolean isNestedAttribute = this.SourcePartitionKeys.Contains("/");
-            Container targetContainer = this.destinationCollectionClient.GetContainer(this.config.DestDbName, this.config.DestCollectionName);
-            this.containerToStoreDocuments = targetContainer;
-            DocumentMetadata document;
-            BulkOperations<DocumentMetadata> bulkOperations = new BulkOperations<DocumentMetadata>(docs.Count);
-            foreach (DocumentMetadata doc in docs)
+            try
             {
-                document = (this.SourcePartitionKeys != null & this.TargetPartitionKey != null) ?
-                    MapPartitionKey(doc, isSyntheticKey, this.TargetPartitionKey, isNestedAttribute, this.SourcePartitionKeys) :
-                    document = doc;
-                bulkOperations.Tasks.Add(this.containerToStoreDocuments.CreateItemAsync(
-                    item: document, 
-                    cancellationToken: cancellationToken).CaptureOperationResponse(document));
+                Boolean isSyntheticKey = this.SourcePartitionKeys.Contains(",");
+                Boolean isNestedAttribute = this.SourcePartitionKeys.Contains("/");
+                Container targetContainer = this.destinationCollectionClient.GetContainer(this.config.DestDbName, this.config.DestCollectionName);
+                this.containerToStoreDocuments = targetContainer;
+                DocumentMetadata document;
+                BulkOperations<DocumentMetadata> bulkOperations = new BulkOperations<DocumentMetadata>(docs.Count);
+                foreach (DocumentMetadata doc in docs)
+                {
+                    document = (this.SourcePartitionKeys != null & this.TargetPartitionKey != null) ?
+                        MapPartitionKey(doc, isSyntheticKey, this.TargetPartitionKey, isNestedAttribute, this.SourcePartitionKeys) :
+                        document = doc;
+                    bulkOperations.Tasks.Add(this.containerToStoreDocuments.CreateItemAsync(
+                        item: document,
+                        cancellationToken: cancellationToken).CaptureOperationResponse(document));
+                }
+                BulkOperationResponse<DocumentMetadata> bulkOperationResponse = await bulkOperations.ExecuteAsync().ConfigureAwait(false);
+                if (bulkOperationResponse.Failures.Count > 0 && this.deadletterClient != null)
+                {
+                    WriteFailedDocsToBlob("FailedImportDocs", this.deadletterClient, bulkOperationResponse);
+                }
+                TelemetryHelper.Singleton.LogMetrics(bulkOperationResponse);
             }
-            BulkOperationResponse<DocumentMetadata> bulkOperationResponse = await bulkOperations.ExecuteAsync().ConfigureAwait(false);
-            if (bulkOperationResponse.Failures.Count > 0 && this.deadletterClient != null)
+            catch (Exception error)
             {
-                WriteFailedDocsToBlob("FailedImportDocs", this.deadletterClient, bulkOperationResponse);
+                TelemetryHelper.Singleton.LogError(
+                    "Processing changes failed: {0}",
+                    error);
+
+                throw;
             }
-            TelemetryHelper.Singleton.LogMetrics(bulkOperationResponse);
         }
 
         private static void WriteFailedDocsToBlob(
@@ -214,19 +236,30 @@ namespace Migration.Executor.WebJob
             BlobContainerClient containerClient,
             BulkOperationResponse<DocumentMetadata> bulkOperationResponse)
         {
-            string failedDocs;
-            string failures;
-            byte[] byteArray;
-            BlobClient blobClient = containerClient.GetBlobClient(failureType + Guid.NewGuid().ToString() + ".csv");
-
-            failures = JsonConvert.SerializeObject(String.Join(",", bulkOperationResponse.DocFailures));
-            failedDocs = JsonConvert.SerializeObject(String.Join(",", bulkOperationResponse.FailedDocs));
-            failedDocs = failedDocLineFeedRemoverRegex.Replace(failedDocs, String.Empty);
-            byteArray = Encoding.ASCII.GetBytes(failures + "|" + bulkOperationResponse.Failures.Count + "|" + failedDocs);
-
-            using (MemoryStream ms = new MemoryStream(byteArray))
+            try
             {
-                blobClient.Upload(ms, overwrite: true);
+                string failedDocs;
+                string failures;
+                byte[] byteArray;
+                BlobClient blobClient = containerClient.GetBlobClient(failureType + Guid.NewGuid().ToString() + ".csv");
+
+                failures = JsonConvert.SerializeObject(String.Join(",", bulkOperationResponse.DocFailures));
+                failedDocs = JsonConvert.SerializeObject(String.Join(",", bulkOperationResponse.FailedDocs));
+                failedDocs = failedDocLineFeedRemoverRegex.Replace(failedDocs, String.Empty);
+                byteArray = Encoding.ASCII.GetBytes(failures + "|" + bulkOperationResponse.Failures.Count + "|" + failedDocs);
+
+                using (MemoryStream ms = new MemoryStream(byteArray))
+                {
+                    blobClient.Upload(ms, overwrite: true);
+                }
+            }
+            catch (Exception error)
+            {
+                TelemetryHelper.Singleton.LogError(
+                    "Writing dcoument to deadletter blob store failed: {0}",
+                    error);
+
+                throw;
             }
         }
 

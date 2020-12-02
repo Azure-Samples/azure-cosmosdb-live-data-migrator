@@ -41,6 +41,37 @@
       "metadata": {
         "description": "The connection string of the default CosmosDB database account name for containers to be migrated to - this is just a default and optional - it can be changed for each migration"
       }
+    },
+    "allowedUsers": {
+      "type": "string",
+      "minLength": 3,
+      "metadata": {
+        "description": "A list of all users who should have access to the migration application. To simplify the deployment there is no integration with RBAC - AAD is used for authentication but the authorization just checks whether the authenticated user is part of the list of allowed users. The sytnax of the allowedUsers string is to concat user identifiers (email or ObjectId) with a | as separator - for example user1@abc.com|user2@cde.com. The list of allowed users is stored in the app-settings of the UI app - so it can be modified there later."
+      }
+    },
+    "migrationAppPackage": {
+      "type": "string",
+      "defaultValue": "//TODO fabianm populate",
+      "minLength": 3,
+      "metadata": {
+        "description": "The full path tot he zip-package containing the deployment package for the Migration UI App"
+      }
+    },
+    "exectuorWebJobPackage": {
+      "type": "string",
+      "defaultValue": "//TODO fabianm populate",
+      "minLength": 3,
+      "metadata": {
+        "description": "The full path to the zip-package containing the deployment package for the Executor WebJob"
+      }
+    },
+    "monitorWebJobPackage": {
+      "type": "string",
+      "defaultValue": "//TODO fabianm populate",
+      "minLength": 3,
+      "metadata": {
+        "description": "The full path to the zip-package containing the deployment package for the Monitor WebJob"
+      }
     }
   },
   "variables": {
@@ -60,6 +91,7 @@
     "deadletterType": "Standard_LRS",
     "location": "[resourceGroup().location]",
     "tenantId": "[subscription().tenantId]",
+    "aspEnvironmentName": "Production",
     "sanitizedSourceAccountNameToAvoidDuplicateResourceNames": "[if(equals(parameters('defaultDestinationDatabaseAccountName'), parameters('defaultSourceDatabaseAccountName')), concat(parameters('defaultSourceDatabaseAccountName'), uniqueString(resourceGroup().id)), parameters('defaultSourceDatabaseAccountName'))]"
   },
   "resources": [
@@ -86,7 +118,7 @@
       "type": "microsoft.insights/components",
       "location": "[variables('location')]",
       "properties": {
-        "ApplicationId": "[variables('migrationAppName')]"
+        "ApplicationId": "[variables('insightsName')]"
       }
     },
     {
@@ -149,11 +181,264 @@
             }
           ],
           "netFrameworkVersion": "v4.0",
-          "alwaysOn": "false"
+          "alwaysOn": "true"
         },
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
         "clientAffinityEnabled": true
-      }
+      },
+      "resources": [
+        {
+          "apiVersion": "2016-03-01",
+          "name": "appsettings",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]",
+          ],
+          "properties": {
+            "cosmosdbaccount": "[variables('migrationStatusDatabaseAccountName')]",
+            "keyvaulturi": "[concat('https://', variables('keyVaultName'), '.vault.azure.net/')]",
+            "defaultdestinationaccount": "[parameters('defaultDestinationDatabaseAccountName')]",
+            "defaultsourceaccount": "[parameters('defaultSourceDatabaseAccountName')]",
+            "cosmosdbdb": "[variables('migrationStatusDatabaseName')]",
+            "allowedUsers": "[parameters('allowedUsers')]",
+            "appinsightsinstrumentationkey": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]",
+            "tenantId": "[variables('tenantId')]",
+            "cosmosdbcollection": "[variables('migrationStatusContainerName')]",
+            "ASPNETCORE_ENVIRONMENT": "[variables('aspEnvironmentName')]",
+            "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation"
+          }
+        },
+        {
+          "name": "MSDeploy",
+          "type": "extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]"
+          ],
+          "tags": {
+            "displayName": "Migration-UI-App"
+          },
+          "properties": {
+            "packageUri": "[parameters('migrationAppPackage')]",
+            "dbType": "None",
+            "connectionString": "",
+            "setParameters": {
+              "IIS Web Application Name": "[variables('migrationAppName')]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "2020-06-01",
+      "name": "[variables('monitorJobName')]",
+      "type": "Microsoft.Web/sites",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components/', variables('insightsName'))]",
+        "[resourceId('Microsoft.Web/serverfarms/', variables('appserviceplanName'))]"
+      ],
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "name": "[variables('monitorJobName')]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]"
+            },
+            {
+              "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
+              "value": "~2"
+            },
+            {
+              "name": "XDT_MicrosoftApplicationInsights_Mode",
+              "value": "default"
+            },
+            {
+              "name": "DiagnosticServices_EXTENSION_VERSION",
+              "value": "disabled"
+            },
+            {
+              "name": "APPINSIGHTS_PROFILERFEATURE_VERSION",
+              "value": "disabled"
+            },
+            {
+              "name": "APPINSIGHTS_SNAPSHOTFEATURE_VERSION",
+              "value": "disabled"
+            },
+            {
+              "name": "InstrumentationEngine_EXTENSION_VERSION",
+              "value": "disabled"
+            },
+            {
+              "name": "SnapshotDebugger_EXTENSION_VERSION",
+              "value": "disabled"
+            },
+            {
+              "name": "XDT_MicrosoftApplicationInsights_BaseExtensions",
+              "value": "disabled"
+            }
+          ],
+          "metadata": [
+            {
+              "name": "CURRENT_STACK",
+              "value": "dotnet"
+            }
+          ],
+          "netFrameworkVersion": "v4.0",
+          "alwaysOn": "true"
+        },
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
+        "clientAffinityEnabled": false
+      },
+      "resources": [
+        {
+          "apiVersion": "2016-03-01",
+          "name": "appsettings",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]"
+          ],
+          "properties": {
+            "cosmosdbaccount": "[variables('migrationStatusDatabaseAccountName')]",
+            "keyvaulturi": "[concat('https://', variables('keyVaultName'), '.vault.azure.net/')]",
+            "cosmosdbdb": "[variables('migrationStatusDatabaseName')]",
+            "appinsightsinstrumentationkey": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]",
+            "cosmosdbcollection": "[variables('migrationStatusContainerName')]",
+            "ASPNETCORE_ENVIRONMENT": "[variables('aspEnvironmentName')]",
+            "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation"
+          }
+        },
+        {
+          "name": "MSDeploy",
+          "type": "extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]"
+          ],
+          "tags": {
+            "displayName": "Migration-Monitor-WebJob"
+          },
+          "properties": {
+            "packageUri": "[parameters('monitorWebJobPackage')]",
+            "dbType": "None",
+            "connectionString": "",
+            "setParameters": {
+              "IIS Web Application Name": "[variables('monitorJobName')]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "2020-06-01",
+      "name": "[variables('executorJobName')]",
+      "type": "Microsoft.Web/sites",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components/', variables('insightsName'))]",
+        "[resourceId('Microsoft.Web/serverfarms/', variables('appserviceplanName'))]"
+      ],
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "name": "[variables('executorJobName')]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]"
+            },
+            {
+              "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
+              "value": "~2"
+            },
+            {
+              "name": "XDT_MicrosoftApplicationInsights_Mode",
+              "value": "default"
+            },
+            {
+              "name": "DiagnosticServices_EXTENSION_VERSION",
+              "value": "disabled"
+            },
+            {
+              "name": "APPINSIGHTS_PROFILERFEATURE_VERSION",
+              "value": "disabled"
+            },
+            {
+              "name": "APPINSIGHTS_SNAPSHOTFEATURE_VERSION",
+              "value": "disabled"
+            },
+            {
+              "name": "InstrumentationEngine_EXTENSION_VERSION",
+              "value": "disabled"
+            },
+            {
+              "name": "SnapshotDebugger_EXTENSION_VERSION",
+              "value": "disabled"
+            },
+            {
+              "name": "XDT_MicrosoftApplicationInsights_BaseExtensions",
+              "value": "disabled"
+            }
+          ],
+          "metadata": [
+            {
+              "name": "CURRENT_STACK",
+              "value": "dotnet"
+            }
+          ],
+          "netFrameworkVersion": "v4.0",
+          "alwaysOn": "true"
+        },
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
+        "clientAffinityEnabled": false
+      },
+      "resources": [
+        {
+          "apiVersion": "2016-03-01",
+          "name": "appsettings",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]"
+          ],
+          "properties": {
+            "cosmosdbaccount": "[variables('migrationStatusDatabaseAccountName')]",
+            "keyvaulturi": "[concat('https://', variables('keyVaultName'), '.vault.azure.net/')]",
+            "cosmosdbdb": "[variables('migrationStatusDatabaseName')]",
+            "appinsightsinstrumentationkey": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]",
+            "cosmosdbcollection": "[variables('migrationStatusContainerName')]",
+            "ASPNETCORE_ENVIRONMENT": "[variables('aspEnvironmentName')]",
+            "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation"
+          }
+        },
+        {
+          "name": "MSDeploy",
+          "type": "extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]"
+          ],
+          "tags": {
+            "displayName": "Migration-Executor-WebJob"
+          },
+          "properties": {
+            "packageUri": "[parameters('exectuorWebJobPackage')]",
+            "dbType": "None",
+            "connectionString": "",
+            "setParameters": {
+              "IIS Web Application Name": "[variables('executorJobName')]"
+            }
+          }
+        }
+      ]
     },
     {
       "apiVersion": "2020-04-01",
@@ -285,6 +570,24 @@
               "secrets": [ "get", "list" ],
               "certificates": []
             }
+          },
+          {
+            "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('executorJobName')), '2020-06-01', 'full').identity.principalId]",
+            "tenantId": "[variables('tenantId')]",
+            "permissions": {
+              "keys": [],
+              "secrets": [ "get", "list" ],
+              "certificates": []
+            }
+          },
+          {
+            "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('monitorJobName')), '2020-06-01', 'full').identity.principalId]",
+            "tenantId": "[variables('tenantId')]",
+            "permissions": {
+              "keys": [],
+              "secrets": [ "get", "list" ],
+              "certificates": []
+            }
           }
         ],
         "sku": {
@@ -297,7 +600,9 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]"
+        "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]",
+        "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]",
+        "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]"
       ]
     },
     {
