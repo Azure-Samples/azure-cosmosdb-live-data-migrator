@@ -1,0 +1,36 @@
+{
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:57392",
+      "sslPort": 44369
+    }
+  },
+  "profiles": {
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "cosmosdbaccount": "fabianm-migration16-cdb",
+        "keyvaulturi": "https://fabianmmikvbv4resmt5miqw.vault.azure.net/",
+        "defaultdestinationaccount": "fabianm-migration16-cdb",
+        "defaultsourceaccount": "fabianm-migration16-cdb",
+        "cosmosdbdb": "MigrationServiceDB",
+        "appinsightsinstrumentationkey": "379aec44-bd34-4a8c-a2e8-455db9b49443",
+        "cosmosdbcollection": "MigrationStatus",
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation"
+      }
+    },
+    "Migration.UI.WebApp": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation"
+      },
+      "applicationUrl": "https://localhost:5001;http://localhost:5000"
+    }
+  }
+}
