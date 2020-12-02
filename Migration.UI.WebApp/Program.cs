@@ -21,32 +21,54 @@ namespace Migration.UI.WebApp
 
         public static void Main(string[] args)
         {
-            EnvironmentConfig.Initialize();
-
-            _ = EnvironmentConfig.Singleton.TenantId;
-            _ = EnvironmentConfig.Singleton.AllowedUsers;
-
-            TelemetryConfiguration telemetryConfig = new TelemetryConfiguration(
-                EnvironmentConfig.Singleton.AppInsightsInstrumentationKey);
-            TelemetryHelper.Initilize(telemetryConfig);
-
-            KeyVaultHelper.Initialize(new Uri(EnvironmentConfig.Singleton.KeyVaultUri), new DefaultAzureCredential());
-
-            using (CosmosClient client =
-                KeyVaultHelper.Singleton.CreateCosmosClientFromKeyVault(
-                    EnvironmentConfig.Singleton.MigrationMetadataCosmosAccountName,
-                    WebAppUserAgentPrefix,
-                    useBulk: false,
-                    retryOn429Forever: true))
+            try
             {
-                MigrationConfigDal.Initialize(
-                    client.GetContainer(
-                        EnvironmentConfig.Singleton.MigrationMetadataDatabaseName,
-                        EnvironmentConfig.Singleton.MigrationMetadataContainerName),
-                    EnvironmentConfig.Singleton.DefaultSourceAccount,
-                    EnvironmentConfig.Singleton.DefaultDestinationAccount);
+                EnvironmentConfig.Initialize();
 
-                CreateHostBuilder(args).Build().Run();
+                TelemetryConfiguration telemetryConfig = new TelemetryConfiguration(
+                    EnvironmentConfig.Singleton.AppInsightsInstrumentationKey);
+                TelemetryHelper.Initilize(telemetryConfig);
+            }
+            catch (Exception error)
+            {
+                Console.WriteLine(
+                    "UNHANDLED EXCEPTION during initialization before TelemetryClient oculd be created: {0}",
+                    error);
+
+                throw;
+            }
+
+            try
+            {
+                _ = EnvironmentConfig.Singleton.TenantId;
+                _ = EnvironmentConfig.Singleton.AllowedUsers;
+
+                KeyVaultHelper.Initialize(new Uri(EnvironmentConfig.Singleton.KeyVaultUri), new DefaultAzureCredential());
+
+                using (CosmosClient client =
+                    KeyVaultHelper.Singleton.CreateCosmosClientFromKeyVault(
+                        EnvironmentConfig.Singleton.MigrationMetadataCosmosAccountName,
+                        WebAppUserAgentPrefix,
+                        useBulk: false,
+                        retryOn429Forever: true))
+                {
+                    MigrationConfigDal.Initialize(
+                        client.GetContainer(
+                            EnvironmentConfig.Singleton.MigrationMetadataDatabaseName,
+                            EnvironmentConfig.Singleton.MigrationMetadataContainerName),
+                        EnvironmentConfig.Singleton.DefaultSourceAccount,
+                        EnvironmentConfig.Singleton.DefaultDestinationAccount);
+
+                    CreateHostBuilder(args).Build().Run();
+                }
+            }
+            catch (Exception unhandledException)
+            {
+                TelemetryHelper.Singleton.LogError(
+                    "UNHANDLED EXCEPTION: {0}",
+                    unhandledException);
+
+                throw;
             }
         }
 

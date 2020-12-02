@@ -56,6 +56,7 @@ namespace Migration.Shared
             string message = String.Format(CultureInfo.InvariantCulture, format, args);
             Console.WriteLine(message);
             this.client.TrackTrace(message, SeverityLevel.Warning);
+            this.client.Flush();
         }
 
         public void LogError(string format, params object[] args)
@@ -63,6 +64,7 @@ namespace Migration.Shared
             string message = String.Format(CultureInfo.InvariantCulture, format, args);
             Console.WriteLine(message);
             this.client.TrackTrace(message, SeverityLevel.Error);
+            this.client.Flush();
         }
 
         public void LogMetrics(BulkOperationResponse<DocumentMetadata> bulkOperationResponse)

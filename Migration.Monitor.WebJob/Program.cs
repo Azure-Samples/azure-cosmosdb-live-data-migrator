@@ -39,16 +39,42 @@ namespace Migration.Monitor.WebJob
         static void Main(string[] args)
 #pragma warning restore IDE0060 // Remove unused parameter
         {
-            TelemetryConfiguration telemetryConfig = new TelemetryConfiguration(appInsightsInstrumentationKey);
-            TelemetryHelper.Initilize(telemetryConfig);
+            try
+            {
+                EnvironmentConfig.Initialize();
 
-            KeyVaultHelper.Initialize(new Uri(keyVaultUri), new DefaultAzureCredential());
+                TelemetryConfiguration telemetryConfig = new TelemetryConfiguration(
+                    EnvironmentConfig.Singleton.AppInsightsInstrumentationKey);
+                TelemetryHelper.Initilize(telemetryConfig);
+            }
+            catch (Exception error)
+            {
+                Console.WriteLine(
+                    "UNHANDLED EXCEPTION during initialization before TelemetryClient oculd be created: {0}",
+                    error);
 
-            RunAsync().Wait();
+                throw;
+            }
+
+            try
+            {
+                KeyVaultHelper.Initialize(new Uri(keyVaultUri), new DefaultAzureCredential());
+
+                RunAsync().Wait();
+            }
+            catch (Exception unhandledException)
+            {
+                TelemetryHelper.Singleton.LogError(
+                    "UNHANDLED EXCEPTION: {0}",
+                    unhandledException);
+
+                throw;
+            }
         }
 
         private static async Task RunAsync()
         {
+            await Task.Yield();
             SemaphoreSlim concurrencySemaphore = new SemaphoreSlim(MaxConcurrentMonitoringJobs);
 
             using (CosmosClient client =

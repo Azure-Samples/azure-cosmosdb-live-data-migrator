@@ -23,13 +23,6 @@ namespace Migration.Executor.WebJob
 
         const int SleepTime = 5000;
 
-        private static readonly string keyVaultUri = ConfigurationManager.AppSettings["keyvaulturi"];
-        private static readonly string migrationMetadataAccount = ConfigurationManager.AppSettings["cosmosdbaccount"];
-        private static readonly string jobdb = ConfigurationManager.AppSettings["cosmosdbdb"];
-        private static readonly string jobColl = ConfigurationManager.AppSettings["cosmosdbcollection"];
-        private static readonly string appInsightsInstrumentationKey =
-            ConfigurationManager.AppSettings["appinsightsinstrumentationkey"];
-
         private string currentMigrationId = null;
         private ChangeFeedProcessorHost changeFeedProcessorHost = null;
 
@@ -37,26 +30,57 @@ namespace Migration.Executor.WebJob
         static void Main(string[] args)
 #pragma warning restore IDE0060 // Remove unused parameter
         {
-            TelemetryConfiguration telemetryConfig = new TelemetryConfiguration(appInsightsInstrumentationKey);
-            TelemetryHelper.Initilize(telemetryConfig);
+            try
+            {
+                EnvironmentConfig.Initialize();
 
-            KeyVaultHelper.Initialize(new Uri(keyVaultUri), new DefaultAzureCredential());
+                TelemetryConfiguration telemetryConfig = new TelemetryConfiguration(
+                    EnvironmentConfig.Singleton.AppInsightsInstrumentationKey);
+                TelemetryHelper.Initilize(telemetryConfig);
+            }
+            catch (Exception error)
+            {
+                Console.WriteLine(
+                    "UNHANDLED EXCEPTION during initialization before TelemetryClient oculd be created: {0}",
+                    error);
 
-            new Program().RunAsync().Wait();
+                throw;
+            }
+
+            try
+            {
+                KeyVaultHelper.Initialize(
+                    new Uri(EnvironmentConfig.Singleton.KeyVaultUri),
+                    new DefaultAzureCredential());
+
+                new Program().RunAsync().Wait();
+            }
+            catch (Exception unhandledException)
+            {
+                TelemetryHelper.Singleton.LogError(
+                    "UNHANDLED EXCEPTION: {0}",
+                    unhandledException);
+
+                throw;
+            }
         }
 
         public async Task RunAsync()
         {
+            await Task.Yield();
+
             using (CosmosClient client =
                 KeyVaultHelper.Singleton.CreateCosmosClientFromKeyVault(
-                    migrationMetadataAccount,
+                    EnvironmentConfig.Singleton.MigrationMetadataCosmosAccountName,
                     MigrationClientUserAgentPrefix,
                     useBulk: false,
                     retryOn429Forever: true))
             {
-                Database db = await client.CreateDatabaseIfNotExistsAsync(jobdb);
+                Database db = await client.CreateDatabaseIfNotExistsAsync(
+                    EnvironmentConfig.Singleton.MigrationMetadataDatabaseName);
 
-                Container container = await db.CreateContainerIfNotExistsAsync(new ContainerProperties(jobColl, "/id"));
+                Container container = await db.CreateContainerIfNotExistsAsync(
+                    new ContainerProperties(EnvironmentConfig.Singleton.MigrationMetadataContainerName, "/id"));
 
                 while (true)
                 {
