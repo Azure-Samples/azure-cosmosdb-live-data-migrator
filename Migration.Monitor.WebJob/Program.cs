@@ -22,13 +22,6 @@ namespace Migration.Monitor.WebJob
         const int SleepTime = 10000;
         const int MaxConcurrentMonitoringJobs = 5;
 
-        private static readonly string keyVaultUri = ConfigurationManager.AppSettings["keyvaulturi"];
-        private static readonly string migrationMetadataAccount = ConfigurationManager.AppSettings["cosmosdbaccount"];
-        private static readonly string migrationDetailsDB = ConfigurationManager.AppSettings["cosmosdbdb"];
-        private static readonly string migrationDetailsColl = ConfigurationManager.AppSettings["cosmosdbcollection"];
-        private static readonly string appInsightsInstrumentationKey =
-            ConfigurationManager.AppSettings["appinsightsinstrumentationkey"];
-
         private static readonly Dictionary<string, CosmosClient> sourceClients = 
             new Dictionary<string, CosmosClient>(StringComparer.OrdinalIgnoreCase);
 
@@ -58,7 +51,9 @@ namespace Migration.Monitor.WebJob
 
             try
             {
-                KeyVaultHelper.Initialize(new Uri(keyVaultUri), new DefaultAzureCredential());
+                KeyVaultHelper.Initialize(
+                    new Uri(EnvironmentConfig.Singleton.KeyVaultUri),
+                    new DefaultAzureCredential());
 
                 RunAsync().Wait();
             }
@@ -79,17 +74,18 @@ namespace Migration.Monitor.WebJob
 
             using (CosmosClient client =
                KeyVaultHelper.Singleton.CreateCosmosClientFromKeyVault(
-                   migrationMetadataAccount,
+                   EnvironmentConfig.Singleton.MigrationMetadataCosmosAccountName,
                    MigrationClientUserAgentPrefix,
                    useBulk: false,
                    retryOn429Forever: true))
             {
                 Database db = await client
-                    .CreateDatabaseIfNotExistsAsync(migrationDetailsDB)
+                    .CreateDatabaseIfNotExistsAsync(EnvironmentConfig.Singleton.MigrationMetadataDatabaseName)
                     .ConfigureAwait(false);
 
                 Container container =await db
-                    .CreateContainerIfNotExistsAsync(new ContainerProperties(migrationDetailsColl, "/id"))
+                    .CreateContainerIfNotExistsAsync(
+                        new ContainerProperties(EnvironmentConfig.Singleton.MigrationMetadataContainerName, "/id"))
                     .ConfigureAwait(false);
 
                 while (true)
