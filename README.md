@@ -26,7 +26,7 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 Click: 
 <br/>
-<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FFabianMeiswinkel%2Fazure-cosmosdb-live-data-migrator%2Fmaster%2FMigrationAppResourceGroup%2Fazuredeploy.json" target="_blank">
+<a href="[https://raw.githubusercontent.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/master/Migration.ResourceGroup/MigrationServices.json](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/Migration.ResourceGroup/MigrationServices.json)" target="_blank">
     <img src="https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true"/></a>
 
 <br/>
