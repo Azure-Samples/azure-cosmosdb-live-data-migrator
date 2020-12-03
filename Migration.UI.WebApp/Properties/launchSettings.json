@@ -17,6 +17,7 @@
         "defaultdestinationaccount": "fabianm-migration16-cdb",
         "defaultsourceaccount": "fabianm-migration16-cdb",
         "cosmosdbdb": "MigrationServiceDB",
+        "cosmosdbleasescollection": "Leases",
         "allowedUsers": "fabianmm@microsoft.com|f46ef4f0-08c9-4d72-bb77-bab55b3f801a",
         "appinsightsinstrumentationkey": "379aec44-bd34-4a8c-a2e8-455db9b49443",
         "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",

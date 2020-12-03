@@ -1,33 +1,31 @@
-﻿using Azure.Identity;
-using Azure.Security.KeyVault.Secrets;
-using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Azure.Cosmos;
-using Migration.Shared;
-using Migration.Shared.DataContracts;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Azure.Identity;
+using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.Azure.Cosmos;
+using Migration.Shared;
+using Migration.Shared.DataContracts;
 
 namespace Migration.Executor.WebJob
 {
-    class Program
+    internal class Program
     {
         public const string MigrationClientUserAgentPrefix = "MigrationExecutor.MigrationMetadata";
-        public const string LeaseClientUserAgentPrefix = "MigrationExecutor.MigrationLeases";
         public const string SourceClientUserAgentPrefix = "MigrationExecutor.Source";
         public const string DestinationClientUserAgentPrefix = "MigrationExecutor.Destination";
 
-        const int SleepTime = 5000;
+        private const int SleepTime = 5000;
 
         private string currentMigrationId = null;
         private ChangeFeedProcessorHost changeFeedProcessorHost = null;
 
 #pragma warning disable IDE0060 // Remove unused parameter
-        static void Main(string[] args)
+
+        private static void Main(string[] args)
 #pragma warning restore IDE0060 // Remove unused parameter
         {
             try

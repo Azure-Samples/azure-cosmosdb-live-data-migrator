@@ -1,12 +1,12 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Migration.Shared.DataContracts
 {
@@ -17,14 +17,13 @@ namespace Migration.Shared.DataContracts
         /// </summary>
         public DocumentMetadata()
         {
-
         }
 
         /// <summary>
         /// Gets or sets the time to live in seconds of the document in the Azure Cosmos DB service.
         /// </summary>
         /// <value>
-        /// It is an optional property. 
+        /// It is an optional property.
         /// A valid value must be either a nonzero positive integer, '-1', or <c>null</c>.
         /// By default, TimeToLive is set to null meaning the document inherits the collection's <see cref="DocumentCollection.DefaultTimeToLive"/>.
         /// The unit of measurement is seconds. The maximum allowed value is 2147483647.
@@ -163,7 +162,7 @@ namespace Migration.Shared.DataContracts
         /// ]]>
         /// </code>
         /// </example>
-        /// <seealso cref="Microsoft.Azure.Documents.DocumentCollection"/>     
+        /// <seealso cref="Microsoft.Azure.Documents.DocumentCollection"/>
         [JsonProperty(PropertyName = "ttl", NullValueHandling = NullValueHandling.Ignore)]
         public int? TimeToLive
         {
@@ -264,6 +263,7 @@ namespace Migration.Shared.DataContracts
         private class DocumentDynamicMetaObject : DynamicMetaObject
         {
             private readonly DocumentMetadata document;
+
             public DocumentDynamicMetaObject(DocumentMetadata document, Expression expression)
                 : base(expression, BindingRestrictions.Empty, document)
             {

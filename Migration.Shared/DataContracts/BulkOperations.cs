@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Migration.Shared.DataContracts
 {
@@ -9,10 +9,12 @@ namespace Migration.Shared.DataContracts
     {
         public readonly List<Task<OperationResponse<T>>> Tasks;
         private readonly Stopwatch stopwatch = Stopwatch.StartNew();
+
         public BulkOperations(int operationCount)
         {
             this.Tasks = new List<Task<OperationResponse<T>>>(operationCount);
         }
+
         public async Task<BulkOperationResponse<T>> ExecuteAsync()
         {
             await Task.WhenAll(this.Tasks);

@@ -1,9 +1,4 @@
-﻿using Azure.Storage.Blobs;
-using Microsoft.Azure.Cosmos;
-using Migration.Shared;
-using Migration.Shared.DataContracts;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Json;
@@ -13,7 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Xml.XPath;
-using V2SDK = Microsoft.Azure.Documents;
+using Azure.Storage.Blobs;
+using Microsoft.Azure.Cosmos;
+using Migration.Shared;
+using Migration.Shared.DataContracts;
+using Newtonsoft.Json;
 
 namespace Migration.Executor.WebJob
 {
@@ -40,8 +39,8 @@ namespace Migration.Executor.WebJob
             this.TargetPartitionKey = config.TargetPartitionKey;
 
             this.leaseCollectionClient = KeyVaultHelper.Singleton.CreateCosmosClientFromKeyVault(
-                    config.LeaseAccount,
-                    Program.LeaseClientUserAgentPrefix,
+                    EnvironmentConfig.Singleton.MigrationMetadataCosmosAccountName,
+                    Program.MigrationClientUserAgentPrefix,
                     useBulk: false,
                     retryOn429Forever: true);
 
@@ -77,21 +76,21 @@ namespace Migration.Executor.WebJob
         {
             try
             {
-                 TelemetryHelper.Singleton.LogInfo(
-                    "Starting lease (transaction log of change feed) standard collection creation: Url {0} - dbName {1} - collectionName {2}",
-                    this.config.LeaseAccount,
-                    this.config.LeaseDbName,
-                    this.config.LeaseCollectionName);
+                TelemetryHelper.Singleton.LogInfo(
+                   "Starting lease (transaction log of change feed) standard collection creation: Url {0} - dbName {1} - collectionName {2}",
+                   EnvironmentConfig.Singleton.MigrationMetadataCosmosAccountName,
+                   EnvironmentConfig.Singleton.MigrationMetadataDatabaseName,
+                   EnvironmentConfig.Singleton.MigrationLeasesContainerName);
 
                 await this.CreateCollectionIfNotExistsAsync(
                     this.leaseCollectionClient,
-                    this.config.LeaseDbName,
-                    this.config.LeaseCollectionName,
+                    EnvironmentConfig.Singleton.MigrationMetadataDatabaseName,
+                    EnvironmentConfig.Singleton.MigrationLeasesContainerName,
                     "id").ConfigureAwait(false);
 
                 TelemetryHelper.Singleton.LogInfo(
-                    "destination (sink) collection : Url {0} - key {1} - dbName {2} - collectionName {3}",
-                    this.config.LeaseAccount,
+                    "destination (sink) collection : Url {0} - dbName {1} - collectionName {2}",
+                    this.config.DestAccount,
                     this.config.DestDbName,
                     this.config.DestCollectionName);
 
@@ -184,7 +183,10 @@ namespace Migration.Executor.WebJob
             this.changeFeedProcessor = this.sourceCollectionClient.GetContainer(this.config.MonitoredDbName, this.config.MonitoredCollectionName)
                 .GetChangeFeedProcessorBuilder<DocumentMetadata>("Live Data Migrator", this.ProcessChangesAsync)
                 .WithInstanceName(hostName)
-                .WithLeaseContainer(this.leaseCollectionClient.GetContainer(this.config.LeaseDbName, this.config.LeaseCollectionName))
+                .WithLeaseContainer(
+                    this.leaseCollectionClient.GetContainer(
+                        EnvironmentConfig.Singleton.MigrationMetadataDatabaseName,
+                        EnvironmentConfig.Singleton.MigrationMetadataDatabaseName))
                 .WithLeaseConfiguration(TimeSpan.FromSeconds(30))
                 .WithStartTime(starttime)
                 .WithMaxItems(1000)
@@ -195,7 +197,7 @@ namespace Migration.Executor.WebJob
             return this.changeFeedProcessor;
         }
 
-        async Task ProcessChangesAsync(IReadOnlyCollection<DocumentMetadata> docs, CancellationToken cancellationToken)
+        private async Task ProcessChangesAsync(IReadOnlyCollection<DocumentMetadata> docs, CancellationToken cancellationToken)
         {
             try
             {
@@ -297,7 +299,7 @@ namespace Migration.Executor.WebJob
                 string attribute = rawattribute.Trim();
                 if (count == arraylength)
                 {
-                    string val = isNestedAttribute == true ? 
+                    string val = isNestedAttribute == true ?
                         GetNestedValue(doc, attribute) :
                         doc.GetPropertyValue<string>(attribute);
                     syntheticKey.Append(val);

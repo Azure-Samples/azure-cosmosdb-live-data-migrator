@@ -12,23 +12,24 @@ using Migration.Shared.DataContracts;
 
 namespace Migration.Monitor.WebJob
 {
-    class Program
+    internal class Program
     {
         public const string MigrationClientUserAgentPrefix = "MigrationMonitor.MigrationMetadata";
         public const string SourceClientUserAgentPrefix = "MigrationMonitor.Source";
         public const string DestinationClientUserAgentPrefix = "MigrationMonitor.Destination";
 
-        const int SleepTime = 10000;
-        const int MaxConcurrentMonitoringJobs = 5;
+        private const int SleepTime = 10000;
+        private const int MaxConcurrentMonitoringJobs = 5;
 
-        private static readonly Dictionary<string, CosmosClient> sourceClients = 
+        private static readonly Dictionary<string, CosmosClient> sourceClients =
             new Dictionary<string, CosmosClient>(StringComparer.OrdinalIgnoreCase);
 
         private static readonly Dictionary<string, CosmosClient> destinationClients =
             new Dictionary<string, CosmosClient>(StringComparer.OrdinalIgnoreCase);
 
 #pragma warning disable IDE0060 // Remove unused parameter
-        static void Main(string[] args)
+
+        private static void Main(string[] args)
 #pragma warning restore IDE0060 // Remove unused parameter
         {
             try
@@ -82,7 +83,7 @@ namespace Migration.Monitor.WebJob
                     .CreateDatabaseIfNotExistsAsync(EnvironmentConfig.Singleton.MigrationMetadataDatabaseName)
                     .ConfigureAwait(false);
 
-                Container container =await db
+                Container container = await db
                     .CreateContainerIfNotExistsAsync(
                         new ContainerProperties(EnvironmentConfig.Singleton.MigrationMetadataContainerName, "/id"))
                     .ConfigureAwait(false);
@@ -140,7 +141,7 @@ namespace Migration.Monitor.WebJob
             MigrationConfig migrationConfig,
             SemaphoreSlim concurrencySempahore)
         {
-            if (migrationContainer== null) { throw new ArgumentNullException(nameof(migrationContainer)); }
+            if (migrationContainer == null) { throw new ArgumentNullException(nameof(migrationContainer)); }
             if (migrationConfig == null) { throw new ArgumentNullException(nameof(migrationConfig)); }
             if (concurrencySempahore == null) { throw new ArgumentNullException(nameof(concurrencySempahore)); }
 
@@ -149,7 +150,7 @@ namespace Migration.Monitor.WebJob
                 CosmosClient sourceClient = GetOrCreateSourceCosmosClient(migrationConfig.MonitoredAccount);
                 CosmosClient destinationClient = GetOrCreateSourceCosmosClient(migrationConfig.DestAccount);
                 Container sourceContainer = sourceClient.GetContainer(
-                    migrationConfig.MonitoredDbName, 
+                    migrationConfig.MonitoredDbName,
                     migrationConfig.MonitoredCollectionName);
                 Container destinationContainer = destinationClient.GetContainer(
                     migrationConfig.DestDbName,
@@ -166,10 +167,10 @@ namespace Migration.Monitor.WebJob
                     long sourceCollectionCount = await GetDoucmentCountAsync(sourceContainer).ConfigureAwait(false);
                     long currentDestinationCollectionCount = await GetDoucmentCountAsync(destinationContainer)
                         .ConfigureAwait(false);
-                    double currentPercentage = sourceCollectionCount == 0 ? 
-                        100 : 
+                    double currentPercentage = sourceCollectionCount == 0 ?
+                        100 :
                         currentDestinationCollectionCount * 100.0 / sourceCollectionCount;
-                    long insertedCount = 
+                    long insertedCount =
                         currentDestinationCollectionCount - migrationConfigSnapshot.MigratedDocumentCount;
                     double currentRate = insertedCount * 1000.0 / SleepTime;
                     DateTime currentTime = DateTime.UtcNow;
@@ -177,7 +178,7 @@ namespace Migration.Monitor.WebJob
                     long totalSeconds = (nowEpochMs - migrationConfigSnapshot.StartTimeEpochMs) / 1000;
                     double averageRate = currentDestinationCollectionCount / totalSeconds;
                     double eta = (sourceCollectionCount - currentDestinationCollectionCount) * 1000 / (averageRate * 3600);
-                    long etaMs = averageRate == 0 ? 0: (long)eta;
+                    long etaMs = averageRate == 0 ? 0 : (long)eta;
 
                     migrationConfigSnapshot.ExpectedDurationLeft = etaMs;
                     migrationConfigSnapshot.AvgRate = averageRate;
@@ -243,7 +244,7 @@ namespace Migration.Monitor.WebJob
                 accountName);
         }
 
-        private static  CosmosClient GetOrCreateCosmosClient(
+        private static CosmosClient GetOrCreateCosmosClient(
             Dictionary<string, CosmosClient> cache,
             string userAgentPrefix,
             string accountName)

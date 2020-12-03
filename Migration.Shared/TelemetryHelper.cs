@@ -1,11 +1,10 @@
-﻿using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Azure.Documents;
-using Migration.Shared.DataContracts;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Globalization;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.DataContracts;
+using Microsoft.ApplicationInsights.Extensibility;
+using Migration.Shared.DataContracts;
 
 namespace Migration.Shared
 {

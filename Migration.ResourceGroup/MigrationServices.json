@@ -51,7 +51,7 @@
     },
     "migrationAppPackage": {
       "type": "string",
-      "defaultValue": "https://fabianmstorage.blob.core.windows.net/migration-tool/2020-12-03_0001/Migration.UI.WebApp.zip",
+      "defaultValue": "https://fabianmstorage.blob.core.windows.net/migration-tool/2020-12-03_0002/Migration.UI.WebApp.zip",
       "minLength": 3,
       "metadata": {
         "description": "The full path tot he zip-package containing the deployment package for the Migration UI App"
@@ -59,7 +59,7 @@
     },
     "exectuorWebJobPackage": {
       "type": "string",
-      "defaultValue": "https://fabianmstorage.blob.core.windows.net/migration-tool/2020-12-03_0001/Migration.Executor.WebJob.zip",
+      "defaultValue": "https://fabianmstorage.blob.core.windows.net/migration-tool/2020-12-03_0002/Migration.Executor.WebJob.zip",
       "minLength": 3,
       "metadata": {
         "description": "The full path to the zip-package containing the deployment package for the Executor WebJob"
@@ -67,7 +67,7 @@
     },
     "monitorWebJobPackage": {
       "type": "string",
-      "defaultValue": "https://fabianmstorage.blob.core.windows.net/migration-tool/2020-12-03_0001/Migration.Monitor.WebJob.zip",
+      "defaultValue": "https://fabianmstorage.blob.core.windows.net/migration-tool/2020-12-03_0002/Migration.Monitor.WebJob.zip",
       "minLength": 3,
       "metadata": {
         "description": "The full path to the zip-package containing the deployment package for the Monitor WebJob"
@@ -151,7 +151,8 @@
       "location": "[variables('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.Web/serverfarms/', variables('appserviceplanName'))]",
-        "[resourceId('Microsoft.OperationalInsights/workspaces/', variables('logAnalyticsName'))]"
+        "[resourceId('Microsoft.OperationalInsights/workspaces/', variables('logAnalyticsName'))]",
+        "[resourceId('Microsoft.Insights/components/', variables('insightsName'))]"
       ],
       "identity": {
         "type": "SystemAssigned"
@@ -167,6 +168,10 @@
               "value": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]"
             },
             {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').ConnectionString]"
+            },
+            {
               "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
               "value": "~2"
             },
@@ -176,27 +181,27 @@
             },
             {
               "name": "DiagnosticServices_EXTENSION_VERSION",
-              "value": "disabled"
+              "value": "enabled"
             },
             {
               "name": "APPINSIGHTS_PROFILERFEATURE_VERSION",
-              "value": "disabled"
+              "value": "enabled"
             },
             {
               "name": "APPINSIGHTS_SNAPSHOTFEATURE_VERSION",
-              "value": "disabled"
+              "value": "enabled"
             },
             {
               "name": "InstrumentationEngine_EXTENSION_VERSION",
-              "value": "disabled"
+              "value": "enabled"
             },
             {
               "name": "SnapshotDebugger_EXTENSION_VERSION",
-              "value": "disabled"
+              "value": "enabled"
             },
             {
               "name": "XDT_MicrosoftApplicationInsights_BaseExtensions",
-              "value": "disabled"
+              "value": "enabled"
             }
           ],
           "metadata": [
@@ -210,7 +215,11 @@
         },
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
         "clientAffinityEnabled": true,
-        "use32BitWorkerProcess":  false
+        "httpLoggingEnabled": true,
+        "detailedErrorLoggingEnabled": true,
+        "logsDirectorySizeLimit": 1024,
+        "remoteDebuggingEnabled": false,
+        "requestTracingEnabled": true
       },
       "resources": [
         {
@@ -220,7 +229,6 @@
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]",
             "Microsoft.ApplicationInsights.AzureWebSites",
-            "[resourceId('Microsoft.Insights/components/', variables('insightsName'))]",
             "[resourceId('Microsoft.Web/sites/config', variables('migrationAppName'), 'logs')]"
           ],
           "properties": {
@@ -233,6 +241,7 @@
             "appinsightsinstrumentationkey": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]",
             "tenantId": "[variables('tenantId')]",
             "cosmosdbcollection": "[variables('migrationStatusContainerName')]",
+            "cosmosdbleasescollection": "[variables('migrationStatusLeasesContainerName')]",
             "ASPNETCORE_ENVIRONMENT": "[variables('aspEnvironmentName')]",
             "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation",
             "AzureAd:TenantId": "[variables('tenantId')]",
@@ -246,7 +255,6 @@
           "name": "Microsoft.ApplicationInsights.AzureWebSites",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]",
-            "[resourceId('Microsoft.Insights/components/', variables('insightsName'))]",
             "[resourceId('Microsoft.Web/sites/config', variables('migrationAppName'), 'logs')]"
           ]
         },
@@ -266,6 +274,7 @@
             "httpLogs": {
               "fileSystem": {
                 "retentionInMb": 40,
+                "retentionInDays": 3,
                 "enabled": true
               }
             },
@@ -284,7 +293,6 @@
           "apiVersion": "2015-08-01",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]",
-            "[resourceId('Microsoft.Insights/components/', variables('insightsName'))]",
             "Microsoft.ApplicationInsights.AzureWebSites",
             "[resourceId('Microsoft.Web/sites/config', variables('migrationAppName'), 'logs')]",
             "[resourceId('Microsoft.Web/sites/config', variables('migrationAppName'), 'appsettings')]"
@@ -324,6 +332,10 @@
               "value": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]"
             },
             {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').ConnectionString]"
+            },
+            {
               "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
               "value": "~2"
             },
@@ -362,12 +374,15 @@
               "value": "dotnetcore"
             }
           ],
-          "netFrameworkVersion": "",
           "alwaysOn": "true"
         },
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
         "clientAffinityEnabled": false,
-        "use32BitWorkerProcess": false
+        "httpLoggingEnabled": true,
+        "detailedErrorLoggingEnabled": true,
+        "logsDirectorySizeLimit": 1024,
+        "remoteDebuggingEnabled": false,
+        "requestTracingEnabled": true
       },
       "resources": [
         {
@@ -377,7 +392,6 @@
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]",
             "Microsoft.ApplicationInsights.AzureWebSites",
-            "[resourceId('Microsoft.Insights/components/', variables('insightsName'))]",
             "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'logs')]"
           ],
           "properties": {
@@ -386,6 +400,7 @@
             "cosmosdbdb": "[variables('migrationStatusDatabaseName')]",
             "appinsightsinstrumentationkey": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]",
             "cosmosdbcollection": "[variables('migrationStatusContainerName')]",
+            "cosmosdbleasescollection": "[variables('migrationStatusLeasesContainerName')]",
             "ASPNETCORE_ENVIRONMENT": "[variables('aspEnvironmentName')]",
             "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation"
           }
@@ -396,7 +411,6 @@
           "name": "Microsoft.ApplicationInsights.AzureWebSites",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]",
-            "[resourceId('Microsoft.Insights/components/', variables('insightsName'))]",
             "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'logs')]"
           ]
         },
@@ -416,6 +430,7 @@
             "httpLogs": {
               "fileSystem": {
                 "retentionInMb": 40,
+                "retentionInDays": 3,
                 "enabled": true
               }
             },
@@ -434,7 +449,6 @@
           "apiVersion": "2015-08-01",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]",
-            "[resourceId('Microsoft.Insights/components/', variables('insightsName'))]",
             "Microsoft.ApplicationInsights.AzureWebSites",
             "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'logs')]",
             "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'appsettings')]"
@@ -457,7 +471,8 @@
       "location": "[variables('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.Web/serverfarms/', variables('appserviceplanName'))]",
-        "[resourceId('Microsoft.OperationalInsights/workspaces/', variables('logAnalyticsName'))]"
+        "[resourceId('Microsoft.OperationalInsights/workspaces/', variables('logAnalyticsName'))]",
+        "[resourceId('Microsoft.Insights/components/', variables('insightsName'))]"
       ],
       "identity": {
         "type": "SystemAssigned"
@@ -473,6 +488,10 @@
               "value": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]"
             },
             {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').ConnectionString]"
+            },
+            {
               "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
               "value": "~2"
             },
@@ -482,15 +501,15 @@
             },
             {
               "name": "DiagnosticServices_EXTENSION_VERSION",
-              "value": "disabled"
+              "value": "enabled"
             },
             {
               "name": "APPINSIGHTS_PROFILERFEATURE_VERSION",
-              "value": "disabled"
+              "value": "enabled"
             },
             {
               "name": "APPINSIGHTS_SNAPSHOTFEATURE_VERSION",
-              "value": "disabled"
+              "value": "enabled"
             },
             {
               "name": "InstrumentationEngine_EXTENSION_VERSION",
@@ -498,11 +517,11 @@
             },
             {
               "name": "SnapshotDebugger_EXTENSION_VERSION",
-              "value": "disabled"
+              "value": "enabled"
             },
             {
               "name": "XDT_MicrosoftApplicationInsights_BaseExtensions",
-              "value": "disabled"
+              "value": "enabled"
             }
           ],
           "metadata": [
@@ -516,7 +535,11 @@
         },
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
         "clientAffinityEnabled": false,
-        "use32BitWorkerProcess": false
+        "httpLoggingEnabled": true,
+        "detailedErrorLoggingEnabled": true,
+        "logsDirectorySizeLimit": 1024,
+        "remoteDebuggingEnabled": false,
+        "requestTracingEnabled": true
       },
       "resources": [
         {
@@ -526,7 +549,6 @@
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]",
             "Microsoft.ApplicationInsights.AzureWebSites",
-            "[resourceId('Microsoft.Insights/components/', variables('insightsName'))]",
             "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'logs')]"
           ],
           "properties": {
@@ -535,6 +557,7 @@
             "cosmosdbdb": "[variables('migrationStatusDatabaseName')]",
             "appinsightsinstrumentationkey": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]",
             "cosmosdbcollection": "[variables('migrationStatusContainerName')]",
+            "cosmosdbleasescollection": "[variables('migrationStatusLeasesContainerName')]",
             "ASPNETCORE_ENVIRONMENT": "[variables('aspEnvironmentName')]",
             "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation"
           }
@@ -545,7 +568,6 @@
           "name": "Microsoft.ApplicationInsights.AzureWebSites",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]",
-            "[resourceId('Microsoft.Insights/components/', variables('insightsName'))]",
             "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'logs')]"
           ]
         },
@@ -565,6 +587,7 @@
             "httpLogs": {
               "fileSystem": {
                 "retentionInMb": 40,
+                "retentionInDays": 3,
                 "enabled": true
               }
             },
@@ -583,7 +606,6 @@
           "apiVersion": "2015-08-01",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]",
-            "[resourceId('Microsoft.Insights/components/', variables('insightsName'))]",
             "Microsoft.ApplicationInsights.AzureWebSites",
             "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'logs')]",
             "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'appsettings')]"

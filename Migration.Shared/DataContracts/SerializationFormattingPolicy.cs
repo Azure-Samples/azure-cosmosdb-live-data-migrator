@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Migration.Shared.DataContracts
+﻿namespace Migration.Shared.DataContracts
 {
     public enum SerializationFormattingPolicy
     {
-        /// <summary> 
+        /// <summary>
         /// No additional formatting required.
         /// </summary>
         None,

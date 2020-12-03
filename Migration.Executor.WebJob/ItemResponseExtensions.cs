@@ -1,8 +1,8 @@
-﻿using Microsoft.Azure.Cosmos;
-using Migration.Shared.DataContracts;
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Azure.Cosmos;
+using Migration.Shared.DataContracts;
 
 namespace Migration.Executor.WebJob
 {

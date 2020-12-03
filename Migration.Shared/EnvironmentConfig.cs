@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Migration.Shared
 {
@@ -17,6 +15,7 @@ namespace Migration.Shared
             this.MigrationMetadataCosmosAccountName = GetRequiredEnvironmentVariable("cosmosdbaccount");
             this.MigrationMetadataDatabaseName = GetRequiredEnvironmentVariable("cosmosdbdb");
             this.MigrationMetadataContainerName = GetRequiredEnvironmentVariable("cosmosdbcollection");
+            this.MigrationLeasesContainerName = GetRequiredEnvironmentVariable("cosmosdbleasescollection");
             this.AppInsightsInstrumentationKey = GetRequiredEnvironmentVariable("appinsightsinstrumentationkey");
             this.DefaultSourceAccount = Environment.GetEnvironmentVariable("defaultsourceaccount");
             this.DefaultDestinationAccount = Environment.GetEnvironmentVariable("defaultdestinationaccount");
@@ -46,12 +45,12 @@ namespace Migration.Shared
         public string MigrationMetadataCosmosAccountName { get; }
         public string MigrationMetadataDatabaseName { get; }
         public string MigrationMetadataContainerName { get; }
+        public string MigrationLeasesContainerName { get; }
         public string AppInsightsInstrumentationKey { get; }
         public string DefaultSourceAccount { get; }
         public string DefaultDestinationAccount { get; }
         public string TenantId => this.tenantId.Value;
         public string AllowedUsers => this.allowedUsers.Value;
-
 
         private static string GetRequiredEnvironmentVariable(string name)
         {

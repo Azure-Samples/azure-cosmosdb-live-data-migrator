@@ -33,7 +33,7 @@ namespace Migration.Shared.DataContracts
         internal JsonSerializerSettings SerializerSettings { get; set; }
 
         //Public Serialization Helpers.
-        /// <summary> 
+        /// <summary>
         /// Saves the object to the specified stream in the Azure Cosmos DB service.
         /// </summary>
         /// <param name="stream">Saves the object to this output stream.</param>
@@ -43,7 +43,7 @@ namespace Migration.Shared.DataContracts
             this.SaveTo(stream, formattingPolicy, null);
         }
 
-        /// <summary> 
+        /// <summary>
         /// Saves the object to the specified stream in the Azure Cosmos DB service.
         /// </summary>
         /// <param name="stream">Saves the object to this output stream.</param>
@@ -98,7 +98,7 @@ namespace Migration.Shared.DataContracts
             writer.Flush();
         }
 
-        /// <summary> 
+        /// <summary>
         /// Saves the object to the specified string builder
         /// </summary>
         /// <param name="stringBuilder">Saves the object to this output string builder.</param>
@@ -112,7 +112,6 @@ namespace Migration.Shared.DataContracts
 
             this.SaveTo(new JsonTextWriter(new StringWriter(stringBuilder, CultureInfo.CurrentCulture)), new JsonSerializer(), formattingPolicy);
         }
-
 
         /// <summary>
         /// Loads the object from the specified JSON reader in the Azure Cosmos DB service.
@@ -149,7 +148,7 @@ namespace Migration.Shared.DataContracts
             this.SerializerSettings = serializerSettings;
         }
 
-        static void SetupJsonReader(JsonReader reader, JsonSerializerSettings serializerSettings)
+        private static void SetupJsonReader(JsonReader reader, JsonSerializerSettings serializerSettings)
         {
             if (serializerSettings != null)
             {
@@ -327,6 +326,7 @@ namespace Migration.Shared.DataContracts
         }
 
         #region Protected Signals
+
         /// <summary>
         /// Get the value associated with the specified property name.
         /// </summary>
@@ -678,7 +678,7 @@ namespace Migration.Shared.DataContracts
             return null;
         }
 
-        static string GeneratePathForNameBased(Type resourceType, string resourceOwnerFullName, string resourceName)
+        private static string GeneratePathForNameBased(Type resourceType, string resourceOwnerFullName, string resourceName)
         {
             if (resourceName == null)
                 return null;
@@ -700,7 +700,7 @@ namespace Migration.Shared.DataContracts
             throw new ArgumentOutOfRangeException(nameof(resourceType));
         }
 
-        static bool IsPublicResource(Type resourceType)
+        private static bool IsPublicResource(Type resourceType)
         {
             if (typeof(DocumentMetadata).IsAssignableFrom(resourceType))
             {
@@ -799,9 +799,9 @@ namespace Migration.Shared.DataContracts
 
         internal virtual void OnSave()
         {
-
         }
-        #endregion
+
+        #endregion Protected Signals
 
         private static T LoadFrom<T>(JsonTextReader jsonReader, ITypeResolver<T> typeResolver, JsonSerializerSettings settings = null) where T : JsonSerializable, new()
         {

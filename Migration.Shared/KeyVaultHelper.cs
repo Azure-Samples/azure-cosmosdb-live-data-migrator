@@ -1,15 +1,15 @@
-﻿using Azure.Core;
+﻿using System;
+using Azure.Core;
 using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
 using Microsoft.Azure.Cosmos;
-using System;
 
 namespace Migration.Shared
 {
     public class KeyVaultHelper
     {
-        const string CosmosConnectionStringSecretNameSuffix = "-CosmosDB-ConnectionString";
-        const string BlobStorageConnectionStringSecretNameSuffix = "-BlobStorage-ConnectionString";
+        private const string CosmosConnectionStringSecretNameSuffix = "-CosmosDB-ConnectionString";
+        private const string BlobStorageConnectionStringSecretNameSuffix = "-BlobStorage-ConnectionString";
 
         private static KeyVaultHelper singletonInstance;
 
@@ -101,7 +101,7 @@ namespace Migration.Shared
             if (String.IsNullOrWhiteSpace(accountName)) { throw new ArgumentNullException(nameof(accountName)); }
             if (String.IsNullOrWhiteSpace(containerName)) { throw new ArgumentNullException(nameof(containerName)); }
 
-            string connectionString =  KeyVaultHelper.Singleton.GetSecret(accountName + BlobStorageConnectionStringSecretNameSuffix);
+            string connectionString = KeyVaultHelper.Singleton.GetSecret(accountName + BlobStorageConnectionStringSecretNameSuffix);
 
             BlobServiceClient serviceClient = new BlobServiceClient(connectionString);
             return serviceClient.GetBlobContainerClient(containerName);

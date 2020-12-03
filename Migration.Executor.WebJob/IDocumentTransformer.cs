@@ -1,6 +1,6 @@
-﻿using Migration.Shared.DataContracts;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Migration.Shared.DataContracts;
 
 namespace Migration.Executor.WebJob
 {

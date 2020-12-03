@@ -1,14 +1,12 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Globalization;
 using System.IO;
-using System.Text;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace Migration.Shared.DataContracts
 {
-    /// <summary> 
+    /// <summary>
     ///  Represents an abstract resource type in the Azure Cosmos DB service.
     ///  All Azure Cosmos DB resources, such as <see cref="Database"/>, <see cref="DocumentCollection"/>, and <see cref="Document"/> extend this abstract type.
     /// </summary>
@@ -21,7 +19,6 @@ namespace Migration.Shared.DataContracts
         /// </summary>
         protected Resource()
         {
-
         }
 
         /// <summary>
@@ -37,22 +34,21 @@ namespace Migration.Shared.DataContracts
             this.ETag = resource.ETag;
         }
 
-
         /// <summary>
         /// Gets or sets the Id of the resource in the Azure Cosmos DB service.
         /// </summary>
         /// <value>The Id associated with the resource.</value>
         /// <remarks>
         /// <para>
-        /// Every resource within an Azure Cosmos DB database account needs to have a unique identifier. 
+        /// Every resource within an Azure Cosmos DB database account needs to have a unique identifier.
         /// Unlike <see cref="Resource.ResourceId"/>, which is set internally, this Id is settable by the user and is not immutable.
         /// </para>
         /// <para>
-        /// When working with document resources, they too have this settable Id property. 
+        /// When working with document resources, they too have this settable Id property.
         /// If an Id is not supplied by the user the SDK will automatically generate a new GUID and assign its value to this property before
-        /// persisting the document in the database. 
+        /// persisting the document in the database.
         /// You can override this auto Id generation by setting the disableAutomaticIdGeneration parameter on the <see cref="Microsoft.Azure.Documents.Client.DocumentClient"/> instance to true.
-        /// This will prevent the SDK from generating new Ids. 
+        /// This will prevent the SDK from generating new Ids.
         /// </para>
         /// <para>
         /// The following characters are restricted and cannot be used in the Id property:
@@ -73,7 +69,7 @@ namespace Migration.Shared.DataContracts
         /// The Resource Id associated with the resource.
         /// </value>
         /// <remarks>
-        /// A Resource Id is the unique, immutable, identifier assigned to each Azure Cosmos DB 
+        /// A Resource Id is the unique, immutable, identifier assigned to each Azure Cosmos DB
         /// resource whether that is a database, a collection or a document.
         /// These resource ids are used when building up SelfLinks, a static addressable Uri for each resource within a database account.
         /// </remarks>
@@ -87,7 +83,7 @@ namespace Migration.Shared.DataContracts
         /// <summary>
         /// Gets the self-link associated with the resource from the Azure Cosmos DB service.
         /// </summary>
-        /// <value>The self-link associated with the resource.</value> 
+        /// <value>The self-link associated with the resource.</value>
         /// <remarks>
         /// A self-link is a static addressable Uri for each resource within a database account and follows the Azure Cosmos DB resource model.
         /// E.g. a self-link for a document could be dbs/db_resourceid/colls/coll_resourceid/documents/doc_resourceid
@@ -131,7 +127,7 @@ namespace Migration.Shared.DataContracts
         /// The entity tag associated with the resource.
         /// </value>
         /// <remarks>
-        /// ETags are used for concurrency checking when updating resources. 
+        /// ETags are used for concurrency checking when updating resources.
         /// </remarks>
         [JsonProperty(PropertyName = "_etag")]
         public string ETag
@@ -186,7 +182,7 @@ namespace Migration.Shared.DataContracts
             }
         }
 
-        sealed class UnixDateTimeConverter : DateTimeConverterBase
+        private sealed class UnixDateTimeConverter : DateTimeConverterBase
         {
             private static readonly DateTime UnixStartTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 

@@ -20,21 +20,6 @@ namespace Migration.Shared.DataContracts
         [JsonProperty("monitoredCollectionName")]
         public string MonitoredCollectionName { get; set; }
 
-        [JsonProperty("monitoredThroughput")]
-        public int MonitoredThroughput { get; set; }
-
-        [JsonProperty("leaseAccount")]
-        public string LeaseAccount { get; set; }
-
-        [JsonProperty("leaseDbName")]
-        public string LeaseDbName { get; set; }
-
-        [JsonProperty("leaseCollectionName")]
-        public string LeaseCollectionName { get; set; }
-
-        [JsonProperty("leaseThroughput")]
-        public int LeaseThroughput { get; set; }
-
         [JsonProperty("destAccount")]
         public string DestAccount { get; set; }
 
@@ -43,9 +28,6 @@ namespace Migration.Shared.DataContracts
 
         [JsonProperty("destCollectionName")]
         public string DestCollectionName { get; set; }
-
-        [JsonProperty("destThroughput")]
-        public int DestThroughput { get; set; }
 
         [JsonProperty("dataAgeInHours")]
         public double? DataAgeInHours { get; set; }
@@ -96,7 +78,7 @@ namespace Migration.Shared.DataContracts
         /// The entity tag associated with the resource.
         /// </value>
         /// <remarks>
-        /// ETags are used for concurrency checking when updating resources. 
+        /// ETags are used for concurrency checking when updating resources.
         /// </remarks>
         [JsonProperty(PropertyName = "_etag")]
         public string ETag
@@ -118,8 +100,7 @@ namespace Migration.Shared.DataContracts
 
         [JsonIgnore]
         public string StatisticsLastUpdated => this.StatisticsLastUpdatedEpochMs > 0 ?
-            DateTimeOffset.FromUnixTimeMilliseconds(this.StatisticsLastUpdatedEpochMs).ToString("u"):
+            DateTimeOffset.FromUnixTimeMilliseconds(this.StatisticsLastUpdatedEpochMs).ToString("u") :
             "";
     }
-
 }
