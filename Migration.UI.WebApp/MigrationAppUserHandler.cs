@@ -27,7 +27,7 @@ namespace Migration.UI.WebApp
 
             try
             {
-                if (context.User.HasClaim(c => 
+                if (context.User.HasClaim(c =>
                     String.Equals(requirement.TrustedIssuer, c.Issuer) &&
                     requirement.AllowedUsers.Contains(c.Value) &&
                     validClaimTypes.Contains(c.Type)))

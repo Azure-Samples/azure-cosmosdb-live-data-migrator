@@ -22,7 +22,10 @@
         "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
         "cosmosdbcollection": "MigrationStatus",
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation"
+        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation",
+        "AzureAd:TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+        "AzureAd:ClientId": "95cd656b-9369-411e-9274-a51d12c9c020",
+        "AzureAd:Domain": "microsoft.onmicrosoft.com"
       }
     },
     "Migration.UI.WebApp": {
