@@ -185,7 +185,8 @@
           "type": "config",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]",
-            "[resourceId('Microsoft.Web/sites/config', variables('migrationAppName'), 'logs')]"
+            "[resourceId('Microsoft.Web/sites/config', variables('migrationAppName'), 'logs')]",
+            "[resourceId('Microsoft.Web/sites/extensions', variables('migrationAppName'), 'MSDeploy')]"
           ],
           "properties": {
             "cosmosdbaccount": "[variables('migrationStatusDatabaseAccountName')]",
@@ -217,7 +218,7 @@
           }
         },
         {
-          "type": "Microsoft.Web/sites/siteextensions",
+          "type": "siteextensions",
           "apiVersion": "2020-06-01",
           "name": "Microsoft.ApplicationInsights.AzureWebSites",
           "dependsOn": [
@@ -231,7 +232,8 @@
           "apiVersion": "2020-06-01",
           "name": "logs",
           "dependsOn": [
-            "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]"
+            "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]",
+            "[resourceId('Microsoft.Web/sites/extensions', variables('migrationAppName'), 'MSDeploy')]"
           ],
           "properties": {
             "applicationLogs": {
@@ -260,10 +262,7 @@
           "location": "[resourceGroup().location]",
           "apiVersion": "2015-08-01",
           "dependsOn": [
-            "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]",
-            "[resourceId('Microsoft.Web/sites/sitextensions', variables('migrationAppName'), 'Microsoft.ApplicationInsights.AzureWebSites')]",
-            "[resourceId('Microsoft.Web/sites/config', variables('migrationAppName'), 'logs')]",
-            "[resourceId('Microsoft.Web/sites/config', variables('migrationAppName'), 'appsettings')]"
+            "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]"
           ],
           "tags": {
             "displayName": "Migration-UI-App"
@@ -318,7 +317,8 @@
           "type": "config",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]",
-            "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'logs')]"
+            "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'logs')]",
+            "[resourceId('Microsoft.Web/sites/extensions', variables('monitorJobName'), 'MSDeploy')]"
           ],
           "properties": {
             "cosmosdbaccount": "[variables('migrationStatusDatabaseAccountName')]",
@@ -349,7 +349,8 @@
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]",
             "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'logs')]",
-            "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'appsettings')]"
+            "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'appsettings')]",
+            "[resourceId('Microsoft.Web/sites/extensions', variables('monitorJobName'), 'MSDeploy')]"
           ]
         },
         {
@@ -357,7 +358,8 @@
           "apiVersion": "2020-06-01",
           "name": "logs",
           "dependsOn": [
-            "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]"
+            "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]",
+            "[resourceId('Microsoft.Web/sites/extensions', variables('monitorJobName'), 'MSDeploy')]"
           ],
           "properties": {
             "applicationLogs": {
@@ -386,10 +388,7 @@
           "location": "[resourceGroup().location]",
           "apiVersion": "2015-08-01",
           "dependsOn": [
-            "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]",
-            "[resourceId('Microsoft.Web/sites/siteextensions', variables('monitorJobName'),'Microsoft.ApplicationInsights.AzureWebSites')]",
-            "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'logs')]",
-            "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'appsettings')]"
+            "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]"
           ],
           "tags": {
             "displayName": "Migration-Monitor-WebJob"
@@ -445,7 +444,8 @@
           "type": "config",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]",
-            "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'logs')]"
+            "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'logs')]",
+            "[resourceId('Microsoft.Web/sites/extensions', variables('executorJobName'), 'MSDeploy')]"
           ],
           "properties": {
             "cosmosdbaccount": "[variables('migrationStatusDatabaseAccountName')]",
@@ -476,7 +476,8 @@
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]",
             "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'logs')]",
-            "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'appsettings')]"
+            "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'appsettings')]",
+            "[resourceId('Microsoft.Web/sites/extensions', variables('executorJobName'), 'MSDeploy')]"
           ]
         },
         {
@@ -484,7 +485,8 @@
           "apiVersion": "2020-06-01",
           "name": "logs",
           "dependsOn": [
-            "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]"
+            "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]",
+            "[resourceId('Microsoft.Web/sites/extensions', variables('executorJobName'), 'MSDeploy')]"
           ],
           "properties": {
             "applicationLogs": {
@@ -513,10 +515,7 @@
           "location": "[resourceGroup().location]",
           "apiVersion": "2015-08-01",
           "dependsOn": [
-            "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]",
-            "[resourceId('Microsoft.Web/sites/siteextensions', variables('executorJobName'),'Microsoft.ApplicationInsights.AzureWebSites')]",
-            "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'logs')]",
-            "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'appsettings')]"
+            "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]"
           ],
           "tags": {
             "displayName": "Migration-Executor-WebJob"

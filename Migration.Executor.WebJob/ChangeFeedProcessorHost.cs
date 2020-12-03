@@ -186,7 +186,7 @@ namespace Migration.Executor.WebJob
                 .WithLeaseContainer(
                     this.leaseCollectionClient.GetContainer(
                         EnvironmentConfig.Singleton.MigrationMetadataDatabaseName,
-                        EnvironmentConfig.Singleton.MigrationMetadataDatabaseName))
+                        EnvironmentConfig.Singleton.MigrationLeasesContainerName))
                 .WithLeaseConfiguration(TimeSpan.FromSeconds(30))
                 .WithStartTime(starttime)
                 .WithMaxItems(1000)
