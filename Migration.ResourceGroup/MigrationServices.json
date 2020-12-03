@@ -162,13 +162,8 @@
         "httpsOnly": true,
         "siteConfig": {
           "minTlsVersion": "1.2",
-          "metadata": [
-            {
-              "name": "CURRENT_STACK",
-              "value": "dotnetcore"
-            }
-          ],
-          "alwaysOn": "true"
+          "alwaysOn": "true",
+          "netFrameworkVersion": "v4.0"
         },
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
         "clientAffinityEnabled": true,
@@ -300,7 +295,8 @@
               "value": "dotnetcore"
             }
           ],
-          "alwaysOn": "true"
+          "alwaysOn": "true",
+          "netFrameworkVersion": ""
         },
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
         "clientAffinityEnabled": false,
@@ -427,7 +423,8 @@
               "value": "dotnetcore"
             }
           ],
-          "alwaysOn": "true"
+          "alwaysOn": "true",
+          "netFrameworkVersion": ""
         },
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
         "clientAffinityEnabled": false,
