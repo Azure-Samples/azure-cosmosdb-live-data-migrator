@@ -255,7 +255,8 @@
           "name": "Microsoft.ApplicationInsights.AzureWebSites",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]",
-            "[resourceId('Microsoft.Web/sites/config', variables('migrationAppName'), 'logs')]"
+            "[resourceId('Microsoft.Web/sites/config', variables('migrationAppName'), 'logs')]",
+            "[resourceId('Microsoft.Web/sites/config', variables('migrationAppName'), 'appsettings')]"
           ]
         },
         {
@@ -293,7 +294,7 @@
           "apiVersion": "2015-08-01",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]",
-            "Microsoft.ApplicationInsights.AzureWebSites",
+            "[resourceId('Microsoft.Web/sites', variables('migrationAppName'),'siteextensions', 'Microsoft.ApplicationInsights.AzureWebSites')]",
             "[resourceId('Microsoft.Web/sites/config', variables('migrationAppName'), 'logs')]",
             "[resourceId('Microsoft.Web/sites/config', variables('migrationAppName'), 'appsettings')]"
           ],
@@ -411,7 +412,8 @@
           "name": "Microsoft.ApplicationInsights.AzureWebSites",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]",
-            "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'logs')]"
+            "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'logs')]",
+            "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'appsettings')]"
           ]
         },
         {
@@ -449,7 +451,7 @@
           "apiVersion": "2015-08-01",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]",
-            "Microsoft.ApplicationInsights.AzureWebSites",
+            "[resourceId('Microsoft.Web/sites', variables('monitorJobName'),'siteextensions', 'Microsoft.ApplicationInsights.AzureWebSites')]",
             "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'logs')]",
             "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'appsettings')]"
           ],
@@ -568,7 +570,8 @@
           "name": "Microsoft.ApplicationInsights.AzureWebSites",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]",
-            "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'logs')]"
+            "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'logs')]",
+            "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'appsettings')]"
           ]
         },
         {
@@ -606,7 +609,7 @@
           "apiVersion": "2015-08-01",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]",
-            "Microsoft.ApplicationInsights.AzureWebSites",
+            "[resourceId('Microsoft.Web/sites', variables('executorJobName'),'siteextensions', 'Microsoft.ApplicationInsights.AzureWebSites')]",
             "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'logs')]",
             "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'appsettings')]"
           ],
