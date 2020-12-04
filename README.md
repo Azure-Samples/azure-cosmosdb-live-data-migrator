@@ -24,6 +24,21 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 ### Quickstart
 
+#### Prerequisites
+
+- Open the Azure portal (https://portal.azure.com) and navigate to the "App registrations" blade
+- Click "New registration"
+
+
+
+​		![https://raw.githubusercontent.com/FabianMeiswinkel/azure-quickstart-templates/master/images/readme_01_prerequisites_name.png?sanitize=true](https://raw.githubusercontent.com/FabianMeiswinkel/azure-quickstart-templates/master/images/readme_01_prerequisites_name.png?sanitize=true)
+
+- s
+
+
+
+
+
 Click: 
 <br/>
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FFabianMeiswinkel%2Fazure-cosmosdb-live-data-migrator%2Fmaster%2FMigration.ResourceGroup%2FMigrationServices.json" target="_blank">    <img src="https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true"/></a>
