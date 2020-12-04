@@ -56,20 +56,9 @@ namespace Migration.Executor.WebJob
                     useBulk: true,
                     retryOn429Forever: true);
 
-            if (!String.IsNullOrWhiteSpace(config.DeadLetterStorageAccountName) &&
-                !String.IsNullOrWhiteSpace(config.DeadLetterContainerName))
-            {
-                this.deadletterClient = KeyVaultHelper.Singleton.GetBlobContainerClientFromKeyVault(
-                    config.DeadLetterStorageAccountName,
-                    config.DeadLetterContainerName);
-            }
-            else
-            {
-                TelemetryHelper.Singleton.LogWarning(
-                    "Dead-lettering disabled. Storage account '{0}' Container '{1}'",
-                    config.DeadLetterStorageAccountName,
-                    config.DeadLetterContainerName);
-            }
+            this.deadletterClient = KeyVaultHelper.Singleton.GetBlobContainerClientFromKeyVault(
+                EnvironmentConfig.Singleton.DeadLetterAccountName,
+                config.Id?.ToLowerInvariant().Replace("-", String.Empty));
         }
 
         public async Task StartAsync()

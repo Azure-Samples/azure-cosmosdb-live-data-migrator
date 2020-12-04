@@ -176,9 +176,11 @@ namespace Migration.Monitor.WebJob
                     DateTime currentTime = DateTime.UtcNow;
                     long nowEpochMs = now.ToUnixTimeMilliseconds();
                     long totalSeconds = (nowEpochMs - migrationConfigSnapshot.StartTimeEpochMs) / 1000;
-                    double averageRate = currentDestinationCollectionCount / totalSeconds;
-                    double eta = (sourceCollectionCount - currentDestinationCollectionCount) * 1000 / (averageRate * 3600);
-                    long etaMs = averageRate == 0 ? 0 : (long)eta;
+                    double averageRate = totalSeconds > 0 ? currentDestinationCollectionCount / totalSeconds : 0;
+
+                    long etaMs = averageRate > 0
+                        ? (long)((sourceCollectionCount - currentDestinationCollectionCount) * 1000 / (averageRate * 3600))
+                        : DateTimeOffset.MaxValue.ToUnixTimeMilliseconds() - migrationConfigSnapshot.StartTimeEpochMs;
 
                     migrationConfigSnapshot.ExpectedDurationLeft = etaMs;
                     migrationConfigSnapshot.AvgRate = averageRate;
@@ -217,7 +219,7 @@ namespace Migration.Monitor.WebJob
                         currentPercentage,
                         currentRate,
                         averageRate,
-                        eta);
+                        etaMs);
 
                     return;
                 }

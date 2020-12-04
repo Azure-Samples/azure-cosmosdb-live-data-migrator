@@ -13,6 +13,7 @@ namespace Migration.Shared
         {
             this.KeyVaultUri = GetRequiredEnvironmentVariable("keyvaulturi");
             this.MigrationMetadataCosmosAccountName = GetRequiredEnvironmentVariable("cosmosdbaccount");
+            this.DeadLetterAccountName = GetRequiredEnvironmentVariable("deadletteraccount");
             this.MigrationMetadataDatabaseName = GetRequiredEnvironmentVariable("cosmosdbdb");
             this.MigrationMetadataContainerName = GetRequiredEnvironmentVariable("cosmosdbcollection");
             this.MigrationLeasesContainerName = GetRequiredEnvironmentVariable("cosmosdbleasescollection");
@@ -43,6 +44,7 @@ namespace Migration.Shared
 
         public string KeyVaultUri { get; }
         public string MigrationMetadataCosmosAccountName { get; }
+        public string DeadLetterAccountName { get; }
         public string MigrationMetadataDatabaseName { get; }
         public string MigrationMetadataContainerName { get; }
         public string MigrationLeasesContainerName { get; }

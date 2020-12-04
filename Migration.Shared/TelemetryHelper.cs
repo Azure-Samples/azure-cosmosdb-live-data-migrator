@@ -95,19 +95,19 @@ namespace Migration.Shared
             double currentPercentage,
             double currentRate,
             double averageRate,
-            double eta)
+            long etaMs)
         {
             this.client.TrackMetric("SourceCollectionCount", sourceCollectionCount);
             this.client.TrackMetric("DestinationCollectionCount", currentDestinationCollectionCount);
             this.client.TrackMetric("CurrentPercentage", currentPercentage);
             this.client.TrackMetric("CurrentInsertRate", currentRate);
             this.client.TrackMetric("AverageInsertRate", averageRate);
-            this.client.TrackMetric("ETA", eta);
+            this.client.TrackMetric("ETA_ms", etaMs);
 
             this.LogInfo(
-                "CurrentPercentage = {0}, ETA = {1}, Current rate = {2}, Average rate = {3}, Source count = {4}, Destination count = {5}",
+                "CurrentPercentage = {0}, ETA_ms = {1}, Current rate = {2}, Average rate = {3}, Source count = {4}, Destination count = {5}",
                 currentPercentage,
-                eta,
+                etaMs,
                 currentRate,
                 averageRate,
                 sourceCollectionCount,

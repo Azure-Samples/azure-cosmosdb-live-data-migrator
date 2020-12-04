@@ -194,6 +194,7 @@
             "tenantId": "[variables('tenantId')]",
             "cosmosdbcollection": "[variables('migrationStatusContainerName')]",
             "cosmosdbleasescollection": "[variables('migrationStatusLeasesContainerName')]",
+            "deadletteraccount": "[variables('deadletterName')]",
             "ASPNETCORE_ENVIRONMENT": "[variables('aspEnvironmentName')]",
             "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation",
             "AzureAd:TenantId": "[variables('tenantId')]",
@@ -323,6 +324,7 @@
             "appinsightsinstrumentationkey": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]",
             "cosmosdbcollection": "[variables('migrationStatusContainerName')]",
             "cosmosdbleasescollection": "[variables('migrationStatusLeasesContainerName')]",
+            "deadletteraccount": "[variables('deadletterName')]",
             "ASPNETCORE_ENVIRONMENT": "[variables('aspEnvironmentName')]",
             "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation",
             "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]",
@@ -451,6 +453,7 @@
             "appinsightsinstrumentationkey": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]",
             "cosmosdbcollection": "[variables('migrationStatusContainerName')]",
             "cosmosdbleasescollection": "[variables('migrationStatusLeasesContainerName')]",
+            "deadletteraccount": "[variables('deadletterName')]",
             "ASPNETCORE_ENVIRONMENT": "[variables('aspEnvironmentName')]",
             "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation",
             "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('microsoft.insights/components/', variables('insightsName')), '2020-02-02-preview').InstrumentationKey]",
@@ -609,9 +612,7 @@
           }
         },
         "options": {
-          "autoscaleSettings": {
-            "maxThroughput": "4000"
-          }
+          "maxThroughput": "400"
         }
       }
     },
@@ -647,9 +648,7 @@
           }
         },
         "options": {
-          "autoscaleSettings": {
-            "maxThroughput": "4000"
-          }
+          "maxThroughput": "400"
         }
       }
     },

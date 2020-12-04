@@ -41,12 +41,6 @@ namespace Migration.Shared.DataContracts
         [JsonProperty("startTime")]
         public long StartTimeEpochMs { get; set; }
 
-        [JsonProperty("deadLetterStorageAccountName")]
-        public string DeadLetterStorageAccountName { get; set; }
-
-        [JsonProperty("deadLetterContainerName")]
-        public string DeadLetterContainerName { get; set; }
-
         [JsonProperty("statistics.count")]
         public long MigratedDocumentCount { get; set; }
 
@@ -86,6 +80,8 @@ namespace Migration.Shared.DataContracts
             get; set;
         }
 
+
+        // TODO - consider using cleaner Page-View-Model instead
         [JsonIgnore]
         public string SourceIdentifier => string.Concat(this.MonitoredAccount, "/", this.MonitoredDbName, "/", this.MonitoredCollectionName);
 
@@ -102,5 +98,20 @@ namespace Migration.Shared.DataContracts
         public string StatisticsLastUpdated => this.StatisticsLastUpdatedEpochMs > 0 ?
             DateTimeOffset.FromUnixTimeMilliseconds(this.StatisticsLastUpdatedEpochMs).ToString("u") :
             "";
+
+        [JsonIgnore]
+        public string SourceCountSnapshotPretty => this.SourceCountSnapshot.ToString("#,###,###,###,##0");
+
+        [JsonIgnore]
+        public string DestinationCountSnapshotPretty => this.DestinationCountSnapshot.ToString("#,###,###,###,##0");
+
+        [JsonIgnore]
+        public string PercentageCompletedPretty => this.PercentageCompleted.ToString("##0.00");
+
+        [JsonIgnore]
+        public string CurrentRatePretty => this.CurrentRate.ToString("#,###,###,##0.00");
+
+        [JsonIgnore]
+        public string AvgRatePretty => this.AvgRate.ToString("#,###,###,##0.00");
     }
 }

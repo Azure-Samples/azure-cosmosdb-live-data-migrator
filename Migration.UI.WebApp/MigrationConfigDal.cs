@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Microsoft.Azure.Cosmos;
 using Migration.Shared;
 using Migration.Shared.DataContracts;
@@ -99,8 +101,22 @@ namespace Migration.UI.WebApp
 
         public async Task<MigrationConfig> CreateMigrationAsync(MigrationConfig config)
         {
+            if (config == null) { throw new ArgumentNullException(nameof(config)); }
+
+            if (String.IsNullOrWhiteSpace(config.Id))
+            {
+                config.Id = Guid.NewGuid().ToString("N");
+            }
+
             try
             {
+                BlobContainerClient deadletterClient = KeyVaultHelper.Singleton.GetBlobContainerClientFromKeyVault(
+                    EnvironmentConfig.Singleton.DeadLetterAccountName,
+                    config.Id?.ToLowerInvariant().Replace("-", String.Empty));
+                await deadletterClient
+                    .CreateIfNotExistsAsync(PublicAccessType.None)
+                    .ConfigureAwait(false);
+
                 return await this.container
                     .CreateItemAsync<MigrationConfig>(config, new PartitionKey(config.Id))
                     .ConfigureAwait(false);
