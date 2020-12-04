@@ -31,9 +31,68 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 
 
-​		![https://raw.githubusercontent.com/FabianMeiswinkel/azure-quickstart-templates/master/images/readme_01_prerequisites_name.png?sanitize=true](https://raw.githubusercontent.com/FabianMeiswinkel/azure-quickstart-templates/master/images/readme_01_prerequisites_name.png?sanitize=true)
+​		![readme_01_prerequisites_name.png (1241×155) (github.com)](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_01_prerequisites_name.png)
 
-- s
+- Set “Name” to an identifier for you app (like “fabianm-migration01-app”). This registered app will be used to represent your migration app deployment in AAD.
+
+
+
+![readme_02_prerequisites_scope.png (1241×155) (github.com)](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_02_prerequisites_scope.png)
+
+- In most cases you should choose the “Accounts in this organizational directory only” option – at least if you only need to allow users within your AAD tenant to access the migration app.
+
+
+
+
+
+![readme_03_prerequisites_redirection_uri.png (1241×155) (github.com)](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_03_prerequisites_redirection_uri.png)
+
+- In the field for the “redirection Uri” please enter “https://<Resource-Group-Name>-ui.azurewebsites.net/signin-oidc” where “<Resource-Group-Name>” is the name of the resource group that you will use below when actually deploy the Azure resources for your migration app via the ARM template. The host-name for the Azure App Service will need to be globally unique – so it would be a good idea to add some prefix/suffix – I for example used “fabianm-migration01” as the resource group name for my test deployment – so the redirection Uri value would be https://fabianm-migration01-ui.azurewebsites.net/signin-oidc. This value can be changed later if it becomes necessary of course.
+
+
+
+
+
+![readme_04_prerequisites_authentication.png (1241×155) (github.com)](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_04_prerequisites_authentication.png)
+
+- Go to the “Authentication” tab
+
+- In the “Logout URL” field please enter https://%3CResource-Group-Name%3E-ui.azurewebsites.net/signout-callback-oidc” (in my sample https://fabianm-migration01-ui.azurewebsites.net/signout-callback-oidc) This value can be changed later if it becomes necessary of course.
+- Please also enable the “ID tokens” check-box in the “Implicit grant” section
+
+
+
+
+
+
+
+![readme_05_prerequisites_applicationid.png (1241×155) (github.com)](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_05_prerequisites_applicationid.png)
+
+- Please note (I actually mean copy & paste in some text file 😊) the “Application (client) ID” value. This ApplicationId is used to identify your newly created app registration in AAD and will need to be provided when deploying the ARM template below as one of the parameters.
+
+
+
+
+
+![readme_06_prerequisites_api_permissions.png](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_06_prerequisites_api_permissions.png)
+
+- Last-but-not-least the newly registered app needs an “API permission” for “User.ReadBasic.All” to be able to provide the AAD login. I find the easiest way to add this is to Got to the App manifest and add the following json fragment in the “requiredResourceAccess/resourceAccess Array-node.
+
+  >  {
+  >
+  > ​       "id": "b340eb25-3456-403f-be2f-af7a0d370277",
+  >
+  > ​       "type": "Scope"
+  >
+  >  }
+
+
+
+
+
+![readme_07_prerequisites_publisherdomain.png (1241×155) (github.com)](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_07_prerequisites_publisherdomain.png)
+
+- Please open the Manifest of the newly registered App and also note the value of the “publisherDomain” property (in my case because I am deploying the test app in the Microsoft tenant “microsoft.onmicrosoft.com”) - you will also need this when filling out the form to deploy the ARM template
 
 
 
