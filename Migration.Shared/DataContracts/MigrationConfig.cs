@@ -89,7 +89,8 @@ namespace Migration.Shared.DataContracts
         public string DestinationIdentifier => string.Concat(this.DestAccount, "/", this.DestDbName, "/", this.DestCollectionName);
 
         [JsonIgnore]
-        public string EstimatedTimeToComplete => DateTimeOffset.UtcNow.AddMilliseconds(this.ExpectedDurationLeft).ToString("u");
+        public string EstimatedTimeToComplete => DateTimeOffset.UtcNow.AddMilliseconds(
+            Math.Min(this.ExpectedDurationLeft, (long)TimeSpan.FromDays(100).TotalMilliseconds)).ToString("u");
 
         [JsonIgnore]
         public string StartTime => DateTimeOffset.FromUnixTimeMilliseconds(this.StartTimeEpochMs).ToString("u");

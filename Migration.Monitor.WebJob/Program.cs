@@ -180,7 +180,7 @@ namespace Migration.Monitor.WebJob
 
                     long etaMs = averageRate > 0
                         ? (long)((sourceCollectionCount - currentDestinationCollectionCount) * 1000 / (averageRate * 3600))
-                        : DateTimeOffset.MaxValue.ToUnixTimeMilliseconds() - migrationConfigSnapshot.StartTimeEpochMs;
+                        : (long)TimeSpan.FromDays(100).TotalMilliseconds - migrationConfigSnapshot.StartTimeEpochMs;
 
                     migrationConfigSnapshot.ExpectedDurationLeft = etaMs;
                     migrationConfigSnapshot.AvgRate = averageRate;
