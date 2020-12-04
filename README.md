@@ -31,13 +31,13 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 
 
-​		![readme_01_prerequisites_name.png (1241×155) (github.com)](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_01_prerequisites_name.png)
+​		![readme_01_prerequisites_name.png (1241×155) (github.com)](images/readme_01_prerequisites_name.png)
 
 - Set “Name” to an identifier for you app (like “fabianm-migration01-app”). This registered app will be used to represent your migration app deployment in AAD.
 
 
 
-![readme_02_prerequisites_scope.png (1241×155) (github.com)](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_02_prerequisites_scope.png)
+![readme_02_prerequisites_scope.png (1241×155) (github.com)](images/readme_02_prerequisites_scope.png)
 
 - In most cases you should choose the “Accounts in this organizational directory only” option – at least if you only need to allow users within your AAD tenant to access the migration app.
 
@@ -45,7 +45,7 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 
 
-![readme_03_prerequisites_redirection_uri.png (1241×155) (github.com)](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_03_prerequisites_redirection_uri.png)
+![readme_03_prerequisites_redirection_uri.png (1241×155) (github.com)](images/readme_03_prerequisites_redirection_uri.png)
 
 - In the field for the “redirection Uri” please enter “https://<Resource-Group-Name>-ui.azurewebsites.net/signin-oidc” where “<Resource-Group-Name>” is the name of the resource group that you will use below when actually deploy the Azure resources for your migration app via the ARM template. The host-name for the Azure App Service will need to be globally unique – so it would be a good idea to add some prefix/suffix – I for example used “fabianm-migration01” as the resource group name for my test deployment – so the redirection Uri value would be https://fabianm-migration01-ui.azurewebsites.net/signin-oidc. This value can be changed later if it becomes necessary of course.
 
@@ -53,7 +53,7 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 
 
-![readme_04_prerequisites_authentication.png (1241×155) (github.com)](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_04_prerequisites_authentication.png)
+![readme_04_prerequisites_authentication.png (1241×155) (github.com)](images/readme_04_prerequisites_authentication.png)
 
 - Go to the “Authentication” tab
 
@@ -66,7 +66,7 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 
 
-![readme_05_prerequisites_applicationid.png (1241×155) (github.com)](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_05_prerequisites_applicationid.png)
+![readme_05_prerequisites_applicationid.png (1241×155) (github.com)](images/readme_05_prerequisites_applicationid.png)
 
 - Please note (I actually mean copy & paste in some text file 😊) the “Application (client) ID” value. This ApplicationId is used to identify your newly created app registration in AAD and will need to be provided when deploying the ARM template below as one of the parameters.
 
@@ -74,7 +74,7 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 
 
-![readme_06_prerequisites_api_permissions.png](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_06_prerequisites_api_permissions.png)
+![readme_06_prerequisites_api_permissions.png](images/readme_06_prerequisites_api_permissions.png)
 
 - Last-but-not-least the newly registered app needs an “API permission” for “User.ReadBasic.All” to be able to provide the AAD login. I find the easiest way to add this is to Got to the App manifest and add the following json fragment in the “requiredResourceAccess/resourceAccess Array-node.
 
@@ -90,42 +90,103 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 
 
-![readme_07_prerequisites_publisherdomain.png (1241×155) (github.com)](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator/raw/master/images/readme_07_prerequisites_publisherdomain.png)
+![readme_07_prerequisites_publisherdomain.png (1241×155) (github.com)](images/readme_07_prerequisites_publisherdomain.png)
 
 - Please open the Manifest of the newly registered App and also note the value of the “publisherDomain” property (in my case because I am deploying the test app in the Microsoft tenant “microsoft.onmicrosoft.com”) - you will also need this when filling out the form to deploy the ARM template
 
 
 
+#### Prerequisite validation
+
+- An easy way to double-check whether the registered app has been configured properly is to use the “Integration assistant” blade. Please just choose the application type “Web app” – no API calls are made from the app so that can stay disabled.
+- The results should look “all green” like below.
 
 
-Click: 
+
+![readme_08_prerequisites_validation.png (1241×155) (github.com)](images/readme_08_prerequisites_validation.png)
+
+
+
+#### Deployment
+
+- \-     Go back to Go to [GitHub - FabianMeiswinkel/azure-cosmosdb-live-data-migrator: Cosmos DB Live migration service to transfer data from one Container to another.](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator) …
+
+  <u></u>\-     … and click the “Deploy to Azure” button
+
 <br/>
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FFabianMeiswinkel%2Fazure-cosmosdb-live-data-migrator%2Fmaster%2FMigration.ResourceGroup%2FMigrationServices.json" target="_blank">    <img src="https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true"/></a>
 
 <br/>
 
-You will then be presented will some fields you need to populate for the deployment.
+- You will then be presented will some fields you need to populate for the deployment.
 
-- It may be a good practice to create a new Resource group so that it is easy to co-locate the different components of Service. Please make sure that the Resource group Region is same as the Region of Cosmos DB Source and Target collections.
+- In the form pass in the following parameters
 
-- Provide an identifiable Appname and an Appinsights name
+  - **<u>Subscription:</u>** Choose the subscription in which you want to deploy the migration app – this does not necessarily need to be the subscription of the Cosmos DB resources used as source or destination.
 
-- The cosmos db Account information is to store the migration metadata and migration state. Please note that this is not the Source and Target Cosmos DB details and that will need to be entered at a later stage.
+  - **<u>Resource-group:</u>** Create a resource group in which all the Azure resources needed for the migration-application will be deployed into. 
 
-- The Clientpackagelocation and Migrationjoblocation are pre-populated with the zipped files to be published
+  - **<u>Region:</u>** Whenever possible please choose the (or one of the) write regions of your Destination CosmosDB account. So in my case I am deploying the migration app into the “West Europe” region, because my single-master CosmosDB account I want to migrate data into is located there. This is not a hard requirement but will provide the best throughput/latency.
 
-	![Templateparams](images/customdeployment.png)
+  - **<u>Resource Name Prefix:</u>** All Azure resources that will be generated for the migration-app by this ARM template will derive the name of the resources from this prefix. For most resources the name of the created resources will be “<ResourceNamePrefix>” plus some short suffix indicating the type of the resource. For some resource types like StorageAccounts the restrictions for name length are so strict that instead of using the full prefix a unique prefix will be derived from this value.. In my sample I am going to use the same value as the name of the resource group “fabianm-migration01”
 
-- Open the webapp client resource and click on the URL (it will be of the format: https://appnameclient.azurewebsites.net)
-	![Webappclient](images/webappclient.png)
+  - **<u>Default Source Database Account Name:**</u> This value will be provided as default for the source of any new migration you created. For each new migration task you will be able to override it – but for convenience the default value can be provided here (it can be change later in the AppSettings of the “<ResourceNamePrefix>-ui” App Service resource.
 
-- Add the Source and Target Cosmos DB connection details 
+  - **<u>Default Source Database Account Connection String:</u>** Same as the account name – this is just for convenience. The Migration app will expect that a KeyVault resource created by this ARM template has the connection strings for all Cosmos DB accounts used as secrets in it. Asking for the default source account Connection String here is just for convenience so that we can put the right secret into the KeyVault when creating it. If you want to use different Cosmos DB accounts later you would simply need to add a corresponding secret with the name “<CosmosAccountName>- -CosmosDB-ConnectionString” and the Connection String of the Cosmos Account as value.
 
-- Add the Cosmos DB connection details for Lease DB, which is used in the ChangeFeed process. The lease collection, if partitioned, must have partition key column named as "id".
+  - **<u>Default Destination Database Account Name:</u>** Same as for the “Default Source Database Account Name” just for the destination in case you want to move the data to another Cosmos Account.
 
-- Add "Target Partition Key Attribute". This should be the path to the partition key field in the target collection. If the "Source Partition Key Attribute(s)" (see below) is left blank, then it is assumed that partition key in source and target collection are identical, and no mapping will be applied.
+  - **<u>Default Destination Database Account Connection String:</u>** Same as for the “Default Source Database Account Connection String” just for the destination in case you want to move the data to another Cosmos Account.
 
-- [Optional] The "Source Partition Key Attribute(s)" field is used for mapping partition key attributes from your source collection to your target collection. For example, if you want to have a dedicated or synthetic partition key in your new (target) collection named "partitionKey", and this will be populated from "deviceId" in your source collection, you should enter `deviceId` in "Source Partition Key Attributes" field, and `partitionKey` in the "Target Partition Key Attribute" field. You can also add multiple fields separated by a comma to map a synthetic key, e.g. add `deviceId,timestamp` in the "Source Partition Key Attribute(s)" field. Nested source fields are also supported, for example `Parent1/Child1,Parent2/Child2`. If you want to select an item in an array, for example:
+  - **<u>Allowed Users:</u>** One of the more tricky parameters. To keep this migration-app ARM template and the manual preparations necessary to allow AAD based authentication reasonably simple a very simple permission model is used. Instead of using RBAC (Role-based access control) with all of its configuration challenges the “Allowed Users” parameter will simply contain a list of user identities separated by the ‘|’ char for all users who should have access to the application. You can use either the email or ObjectId as “user identity” – but it will only work for users within the same tenant as the application is deployed in. This parameter can later also be modified in the ‘allowedUsers’ parameter in the AppSettings section of the  “<ResourceNamePrefix>-ui” App Service resource.
+
+  - **<u>Migration/Executor/Monitor package parameters:</u>** these are prepopulated with the packages published as a “last known good” version. If needed or you want to contribute to this repo they can be manually generated (Folder publish). But in most cases the prepopulated values should be a good choice.
+
+  - **<u>Aad App Registration Publisher Domain:</u>** Please fill in the “Publisher Domain” value noted down from the manifest when creating the App registration (see Prerequisits section)
+
+  - **<u>Aad App registration Client Id:</u>** Please fill in the “Application (client) Id” value noted down when creating the App registration (see Prerequisits section)
+
+    
+
+  ![readme_09_deployment_parameters.png](images/readme_09_deployment_parameters.png)
+
+- Click “Review+Create”
+- Validation should pass – if so…
+- Click “Create”
+
+
+
+#### Known issues
+
+- ***IMPORTANT** –it looks like occasionally the ARM template can result in conflicts during the deployment – please attempt a retry (by clicking the Redeploy button and using the same values for the parameters) – this usually works.*
+- ***IMPORTANT** – in a couple of cases the migration-app shows an error “HTTP Error 500.30 - ANCM In-Process Start Failure” after the deployment. In this case it usually helps to toggle the “Runtime stack” (in the Settings/Configuration/General settings section of the <ResourceNamePrefix>-ui App Service resource between .Net and .Net Core (change the value, save and then change it back and save again). This seems to be related to some Windows Images only – will provide an update when this is better understood. But it is only necessary to do this once after finishing the deployment via the ARM template.*
+
+
+
+#### First migration walk-through
+
+
+
+- Open the *-ui resource and click on the URL (it will be of the format: https://resourcenameprefix-ui.azurewebsites.net)
+
+![readme_09_app_start.png](images/readme_09_app_start.png)
+
+
+
+![readme_10_app_create.png](images/readme_10_app_create.png)
+
+- When clicking the “Create” button in the header/footer a new migration can be created. 
+
+- The following parameters need to be filled in
+
+  - **<u>Account</u>** – the names of the source and destination accounts – just the “short” names – not the full qualified name with *.documents.azure.com. If one of these accounts is not identical with one of the two default accounts provided when deploying the ARM template, the connection string needs to be added in the KeyVault (name of the secret would need to be “<CosmosAccountName>- -CosmosDB-ConnectionString” and the Connection String of the Cosmos Account as value.
+  - **<u>DB</u>** – the names of the source and destination database
+  - **<u>Container</u>** – the names of the source and destination containers
+  - **<u>PK</u>** – The partition key definitions of the source and destination container. If your partition key is “/id” in the source container and you would want to use “/pk” in the destination container after migration you would enter “id” and “pk” in these fields.
+
+- Click “Create/Start”
+
+- *[Optional] The "Source Partition Key Attribute(s)" field is used for mapping partition key attributes from your source collection to your target collection. For example, if you want to have a dedicated or synthetic partition key in your new (target) collection named "partitionKey", and this will be populated from "deviceId" in your source collection, you should enter `deviceId` in "Source Partition Key Attributes" field, and `partitionKey` in the "Target Partition Key Attribute" field. You can also add multiple fields separated by a comma to map a synthetic key, e.g. add `deviceId,timestamp` in the "Source Partition Key Attribute(s)" field. Nested source fields are also supported, for example `Parent1/Child1,Parent2/Child2`. If you want to select an item in an array, for example:*
 
 	```json
 		{
@@ -140,17 +201,17 @@ You will then be presented will some fields you need to populate for the deploym
 			]
 		}
 	```
-	You can use xpath syntax, e.g. `parent/item[1]/child`. In all cases of synthetic partition key mapping, these will be separated with a dash when mapped to the target collection, e.g. `value1-value2`. If no mapping is required, as there is no dedicated partition key field in your source or target collection, you can leave this field blank (but you must still enter the target collection's partition key field in "Target Partition Key Attribute").
+	*You can use xpath syntax, e.g. `parent/item[1]/child`. In all cases of synthetic partition key mapping, these will be separated with a dash when mapped to the target collection, e.g. `value1-value2`. If no mapping is required, as there is no dedicated partition key field in your source or target collection, you can leave this field blank (but you must still enter the target collection's partition key field in "Target Partition Key Attribute").*
 
-- [Optional] Add the Azure Blob Connection string and Container Name to store the failed / bad records. The complete records would be stored in this Container and can be used for point inserts.
 
-- [Optional] Maximum data age in hours is used to derive the starting point of time to read from source container. In other words, it starts looking for changes after [currenttime - given number of hours] in source. The data migration starts from beginning if this parameter is not specified.
 
-![Migrationdetails](images/migrationdetails.png)
+![readme_11_app_list01.png](images/readme_11_app_list01.png)
 
-- Click on Start MIgration and it will automatically be taken to the Monitoring web UI. It provides the data migration stats and metrics such as counts, completion percentage, ETA and Average insert rate as seen below. 
+- To monitor the migration status(es) you can click on the “List” link in the header/footer. It will show a list with not-yet-completed migrations. If you have finished a migration (and the validation) you can click on the “Complete” button and the migration won’t be shown up in the list anymore.
 
-	![Monitoring](images/monitoring.png)
+- To update the migration status just hit refresh/F5 in the browser. 
+
+	![readme_12_app_list02.png](images/readme_12_app_list02.png)
 
 - Click on Complete Migration once all the documents have been migrated to Target container. If you are doing a live migration for the purpose of changing partition key, you should not complete the migration until you have made any required changes in your client code based on the new partition key scheme. 
 
@@ -166,8 +227,14 @@ You will then be presented will some fields you need to populate for the deploym
 - TBA 
 
 
-### Querying App Insights metrics
-- TBA
+### Troubleshooting
+- All App Services used by the migration app will log into the ApplicationInsights resource in the same resource group. So the two most efficient way for troubleshooting are
+
+  - AppInsights: Run the following query in the “Logs” section to get the most recent errors
+
+    `traces | where message contains 'exception' | top 100 by timestamp desc`
+
+  - Log Streaming: Logging to the files system has been enabled for all three “App Service” resources. Go to the “Monitoring/Log Stream” section in any of the “App Service” resources to take a look at the real-time logs.
 
 
 
