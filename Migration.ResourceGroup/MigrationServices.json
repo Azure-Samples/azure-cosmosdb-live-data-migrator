@@ -346,6 +346,8 @@
           "name": "Microsoft.ApplicationInsights.AzureWebSites",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]",
+            "[resourceId('Microsoft.Web/sites/siteextensions', variables('migrationAppName'), 'Microsoft.ApplicationInsights.AzureWebSites')]",
+            "[resourceId('Microsoft.Web/sites/siteextensions', variables('executorJobName'), 'Microsoft.ApplicationInsights.AzureWebSites')]",
             "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'logs')]",
             "[resourceId('Microsoft.Web/sites/config', variables('monitorJobName'), 'appsettings')]",
             "[resourceId('Microsoft.Web/sites/extensions', variables('monitorJobName'), 'MSDeploy')]"
@@ -475,6 +477,7 @@
           "name": "Microsoft.ApplicationInsights.AzureWebSites",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]",
+            "[resourceId('Microsoft.Web/sites/siteextensions', variables('migrationAppName'), 'Microsoft.ApplicationInsights.AzureWebSites')]",
             "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'logs')]",
             "[resourceId('Microsoft.Web/sites/config', variables('executorJobName'), 'appsettings')]",
             "[resourceId('Microsoft.Web/sites/extensions', variables('executorJobName'), 'MSDeploy')]"
@@ -612,7 +615,7 @@
           }
         },
         "options": {
-          "maxThroughput": "400"
+          "throughput": "400"
         }
       }
     },
@@ -648,7 +651,7 @@
           }
         },
         "options": {
-          "maxThroughput": "400"
+          "throughput": "400"
         }
       }
     },
