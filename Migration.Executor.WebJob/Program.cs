@@ -123,7 +123,7 @@ namespace Migration.Executor.WebJob
                             }
                             else
                             {
-                                TelemetryHelper.Singleton.LogInfo("Current Migration is deleted, closing migration { 0}", Process.GetCurrentProcess().Id);
+                                TelemetryHelper.Singleton.LogInfo("Current Migration is deleted, closing migration {0}", Process.GetCurrentProcess().Id);
                                 this.currentMigrationId = null;
                                 await this.changeFeedProcessorHost.CloseAsync();
                                 this.changeFeedProcessorHost = null;
@@ -134,7 +134,7 @@ namespace Migration.Executor.WebJob
 
                         if (config.Completed)
                         {
-                            TelemetryHelper.Singleton.LogInfo("Current Migration is completed, closing migration { 0}", Process.GetCurrentProcess().Id);
+                            TelemetryHelper.Singleton.LogInfo("Current Migration is completed, closing migration {0}", Process.GetCurrentProcess().Id);
                             this.currentMigrationId = null;
                             await this.changeFeedProcessorHost.CloseAsync();
                             this.changeFeedProcessorHost = null;

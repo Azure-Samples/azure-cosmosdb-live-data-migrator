@@ -201,14 +201,15 @@ namespace Migration.Executor.WebJob
                     document = (this.SourcePartitionKeys != null & this.TargetPartitionKey != null) ?
                         MapPartitionKey(doc, isSyntheticKey, this.TargetPartitionKey, isNestedAttribute, this.SourcePartitionKeys) :
                         document = doc;
-                    bulkOperations.Tasks.Add(this.containerToStoreDocuments.CreateItemAsync(
+                    bulkOperations.Tasks.Add(this.containerToStoreDocuments.UpsertItemAsync(
                         item: document,
                         cancellationToken: cancellationToken).CaptureOperationResponse(document));
                 }
                 BulkOperationResponse<DocumentMetadata> bulkOperationResponse = await bulkOperations.ExecuteAsync().ConfigureAwait(false);
                 if (bulkOperationResponse.Failures.Count > 0 && this.deadletterClient != null)
                 {
-                    WriteFailedDocsToBlob("FailedImportDocs", this.deadletterClient, bulkOperationResponse);
+                    await WriteFailedDocsToBlob("FailedImportDocs", this.deadletterClient, bulkOperationResponse)
+                        .ConfigureAwait(false);
                 }
                 TelemetryHelper.Singleton.LogMetrics(bulkOperationResponse);
             }
@@ -222,7 +223,7 @@ namespace Migration.Executor.WebJob
             }
         }
 
-        private static void WriteFailedDocsToBlob(
+        private static async Task WriteFailedDocsToBlob(
             string failureType,
             BlobContainerClient containerClient,
             BulkOperationResponse<DocumentMetadata> bulkOperationResponse)
@@ -241,8 +242,13 @@ namespace Migration.Executor.WebJob
 
                 using (MemoryStream ms = new MemoryStream(byteArray))
                 {
-                    blobClient.Upload(ms, overwrite: true);
+                    await blobClient
+                        .UploadAsync(ms, overwrite: true)
+                        .ConfigureAwait(false);
                 }
+
+                TelemetryHelper.Singleton.LogWarning(
+                    "FAILED TO INGEST DOCUMENTS: Writing {0} failed documents to the deadletter blob store.", bulkOperationResponse.FailedDocs.Count);
             }
             catch (Exception error)
             {
