@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using Microsoft.ApplicationInsights;
@@ -12,10 +13,22 @@ namespace Migration.Shared
     {
         private static TelemetryHelper singletonInstance;
         private readonly TelemetryClient client;
+        private readonly Dictionary<string, string> defaultProperties;
 
-        private TelemetryHelper(TelemetryClient client)
+        private TelemetryHelper(
+            TelemetryClient client,
+            string sourceName,
+            string hostName)
         {
+            if (String.IsNullOrWhiteSpace(sourceName)) { throw new ArgumentNullException(nameof(sourceName)); }
+            if (String.IsNullOrWhiteSpace(hostName)) { throw new ArgumentNullException(nameof(hostName)); }
+
             this.client = client ?? throw new ArgumentNullException(nameof(client));
+            this.defaultProperties = new Dictionary<string, string>
+            {
+                { "Source", sourceName },
+                { "MachineName", hostName }
+            };
         }
 
         public static TelemetryHelper Singleton
@@ -31,30 +44,33 @@ namespace Migration.Shared
             }
         }
 
-        public static void Initilize(TelemetryConfiguration telemetryConfig)
+        public static void Initilize(
+            TelemetryConfiguration telemetryConfig,
+            string sourceName,
+            string hostName)
         {
-            singletonInstance = new TelemetryHelper(new TelemetryClient(telemetryConfig));
+            singletonInstance = new TelemetryHelper(new TelemetryClient(telemetryConfig), sourceName, hostName);
         }
 
         public void LogInfo(string format, params object[] args)
         {
             string message = String.Format(CultureInfo.InvariantCulture, format, args);
             Console.WriteLine(message);
-            this.client.TrackTrace(message, SeverityLevel.Information);
+            this.client.TrackTrace(message, SeverityLevel.Information, this.defaultProperties);
         }
 
         public void LogVerbose(string format, params object[] args)
         {
             string message = String.Format(CultureInfo.InvariantCulture, format, args);
             Console.WriteLine(message);
-            this.client.TrackTrace(message, SeverityLevel.Verbose);
+            this.client.TrackTrace(message, SeverityLevel.Verbose, this.defaultProperties);
         }
 
         public void LogWarning(string format, params object[] args)
         {
             string message = String.Format(CultureInfo.InvariantCulture, format, args);
             Console.WriteLine(message);
-            this.client.TrackTrace(message, SeverityLevel.Warning);
+            this.client.TrackTrace(message, SeverityLevel.Warning, this.defaultProperties);
             this.client.Flush();
         }
 
@@ -62,20 +78,20 @@ namespace Migration.Shared
         {
             string message = String.Format(CultureInfo.InvariantCulture, format, args);
             Console.WriteLine(message);
-            this.client.TrackTrace(message, SeverityLevel.Error);
+            this.client.TrackTrace(message, SeverityLevel.Error, this.defaultProperties);
             this.client.Flush();
         }
 
         public void LogMetrics(BulkOperationResponse<DocumentMetadata> bulkOperationResponse)
         {
-            this.client.TrackMetric("TotalInserted", bulkOperationResponse.SuccessfulDocuments);
+            this.client.TrackMetric("TotalInserted", bulkOperationResponse.SuccessfulDocuments, this.defaultProperties);
             this.client.TrackMetric("InsertedDocuments-Process:" +
-                Process.GetCurrentProcess().Id, bulkOperationResponse.SuccessfulDocuments);
-            this.client.TrackMetric("TotalRUs", bulkOperationResponse.TotalRequestUnitsConsumed);
+                Process.GetCurrentProcess().Id, bulkOperationResponse.SuccessfulDocuments, this.defaultProperties);
+            this.client.TrackMetric("TotalRUs", bulkOperationResponse.TotalRequestUnitsConsumed, this.defaultProperties);
 
             if (bulkOperationResponse.Failures.Count > 0)
             {
-                this.client.TrackMetric("FailedImportDocsCount", bulkOperationResponse.FailedDocs.Count);
+                this.client.TrackMetric("FailedImportDocsCount", bulkOperationResponse.FailedDocs.Count, this.defaultProperties);
             }
 
             this.LogInfo(
@@ -97,12 +113,12 @@ namespace Migration.Shared
             double averageRate,
             long etaMs)
         {
-            this.client.TrackMetric("SourceCollectionCount", sourceCollectionCount);
-            this.client.TrackMetric("DestinationCollectionCount", currentDestinationCollectionCount);
-            this.client.TrackMetric("CurrentPercentage", currentPercentage);
-            this.client.TrackMetric("CurrentInsertRate", currentRate);
-            this.client.TrackMetric("AverageInsertRate", averageRate);
-            this.client.TrackMetric("ETA_ms", etaMs);
+            this.client.TrackMetric("SourceCollectionCount", sourceCollectionCount, this.defaultProperties);
+            this.client.TrackMetric("DestinationCollectionCount", currentDestinationCollectionCount, this.defaultProperties);
+            this.client.TrackMetric("CurrentPercentage", currentPercentage, this.defaultProperties);
+            this.client.TrackMetric("CurrentInsertRate", currentRate, this.defaultProperties);
+            this.client.TrackMetric("AverageInsertRate", averageRate, this.defaultProperties);
+            this.client.TrackMetric("ETA_ms", etaMs, this.defaultProperties);
 
             this.LogInfo(
                 "CurrentPercentage = {0}, ETA_ms = {1}, Current rate = {2}, Average rate = {3}, Source count = {4}, Destination count = {5}",

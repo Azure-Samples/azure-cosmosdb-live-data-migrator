@@ -14,6 +14,7 @@ namespace Migration.Monitor.WebJob
 {
     internal class Program
     {
+        public const string SourceName = "MigrationMonitor";
         public const string MigrationClientUserAgentPrefix = "MigrationMonitor.MigrationMetadata";
         public const string SourceClientUserAgentPrefix = "MigrationMonitor.Source";
         public const string DestinationClientUserAgentPrefix = "MigrationMonitor.Destination";
@@ -38,7 +39,7 @@ namespace Migration.Monitor.WebJob
 
                 TelemetryConfiguration telemetryConfig = new TelemetryConfiguration(
                     EnvironmentConfig.Singleton.AppInsightsInstrumentationKey);
-                TelemetryHelper.Initilize(telemetryConfig);
+                TelemetryHelper.Initilize(telemetryConfig, SourceName, Environment.MachineName);
             }
             catch (Exception error)
             {

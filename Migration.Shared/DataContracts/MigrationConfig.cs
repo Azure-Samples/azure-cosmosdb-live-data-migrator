@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using Newtonsoft.Json;
 
 namespace Migration.Shared.DataContracts
@@ -114,5 +115,21 @@ namespace Migration.Shared.DataContracts
 
         [JsonIgnore]
         public string AvgRatePretty => this.AvgRate.ToString("#,###,###,##0.00");
+
+        [JsonIgnore]
+        public string ProcessorName =>
+                // Make sure to allow multiple active migrations for the same source container
+                // by creating a unique processor name for every config document
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    "LiveDataMigration_{0}_{1}_{2}_{3}_{4}_{5}_{6}",
+                    this.MonitoredAccount,
+                    this.MonitoredDbName,
+                    this.MonitoredCollectionName,
+                    this.DestAccount,
+                    this.DestDbName,
+                    this.DestCollectionName,
+                    this.StartTimeEpochMs);
     }
+    
 }

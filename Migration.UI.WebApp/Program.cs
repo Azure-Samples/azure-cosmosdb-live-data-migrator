@@ -10,6 +10,7 @@ namespace Migration.UI.WebApp
 {
     public class Program
     {
+        public const string SourceName = "MigrationUI";
         public const string WebAppUserAgentPrefix = "MigrationUI.MigrationMetadata";
         public const string SourceClientUserAgentPrefix = "MigrationUI.Source";
 
@@ -21,7 +22,7 @@ namespace Migration.UI.WebApp
 
                 TelemetryConfiguration telemetryConfig = new TelemetryConfiguration(
                     EnvironmentConfig.Singleton.AppInsightsInstrumentationKey);
-                TelemetryHelper.Initilize(telemetryConfig);
+                TelemetryHelper.Initilize(telemetryConfig, SourceName, Environment.MachineName);
             }
             catch (Exception error)
             {

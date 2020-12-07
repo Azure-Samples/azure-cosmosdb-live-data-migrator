@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Runtime.Serialization.Json;
 using System.Text;
@@ -27,6 +28,7 @@ namespace Migration.Executor.WebJob
         private readonly string SourcePartitionKeys;
         private readonly string TargetPartitionKey;
         private readonly BlobContainerClient deadletterClient;
+        private readonly string processorName;
 
         private readonly MigrationConfig config;
         private ChangeFeedProcessor changeFeedProcessor;
@@ -59,6 +61,10 @@ namespace Migration.Executor.WebJob
             this.deadletterClient = KeyVaultHelper.Singleton.GetBlobContainerClientFromKeyVault(
                 EnvironmentConfig.Singleton.DeadLetterAccountName,
                 config.Id?.ToLowerInvariant().Replace("-", String.Empty));
+
+            // Make sure to allow multiple active migrations for the same source container
+            // by creating a unique processor name for every config document
+            this.processorName = config.ProcessorName;
         }
 
         public async Task StartAsync()
@@ -66,7 +72,8 @@ namespace Migration.Executor.WebJob
             try
             {
                 TelemetryHelper.Singleton.LogInfo(
-                   "Starting lease (transaction log of change feed) standard collection creation: Url {0} - dbName {1} - collectionName {2}",
+                   "Starting lease (transaction log of change feed) standard collection creation: ProcessorName: {0} - Url {1} - dbName {2} - collectionName {3}",
+                   this.processorName,
                    EnvironmentConfig.Singleton.MigrationMetadataCosmosAccountName,
                    EnvironmentConfig.Singleton.MigrationMetadataDatabaseName,
                    EnvironmentConfig.Singleton.MigrationLeasesContainerName);
@@ -78,7 +85,8 @@ namespace Migration.Executor.WebJob
                     "id").ConfigureAwait(false);
 
                 TelemetryHelper.Singleton.LogInfo(
-                    "destination (sink) collection : Url {0} - dbName {1} - collectionName {2}",
+                    "ProcessorName {0} - destination (sink) collection : Url {1} - dbName {2} - collectionName {2}",
+                    this.processorName,
                     this.config.DestAccount,
                     this.config.DestDbName,
                     this.config.DestCollectionName);
@@ -94,7 +102,8 @@ namespace Migration.Executor.WebJob
             catch (Exception error)
             {
                 TelemetryHelper.Singleton.LogError(
-                    "Attempt to start the changefeed processor failed: {0}",
+                    "Attempt to start the changefeed processor {0} failed: {1}",
+                    this.processorName,
                     error);
 
                 throw;
@@ -156,7 +165,7 @@ namespace Migration.Executor.WebJob
         public async Task<ChangeFeedProcessor> RunChangeFeedHostAsync()
         {
             string hostName = Guid.NewGuid().ToString();
-            TelemetryHelper.Singleton.LogInfo("Host name {0}", hostName);
+            TelemetryHelper.Singleton.LogInfo("ProcessorName {0} - Host name {1}", this.processorName, hostName);
 
             DefaultDocumentTransformer docTransformer = new DefaultDocumentTransformer();
 
@@ -170,7 +179,7 @@ namespace Migration.Executor.WebJob
             }
 
             this.changeFeedProcessor = this.sourceCollectionClient.GetContainer(this.config.MonitoredDbName, this.config.MonitoredCollectionName)
-                .GetChangeFeedProcessorBuilder<DocumentMetadata>("Live Data Migrator", this.ProcessChangesAsync)
+                .GetChangeFeedProcessorBuilder<DocumentMetadata>(this.processorName, this.ProcessChangesAsync)
                 .WithInstanceName(hostName)
                 .WithLeaseContainer(
                     this.leaseCollectionClient.GetContainer(
@@ -181,6 +190,10 @@ namespace Migration.Executor.WebJob
                 .WithMaxItems(1000)
                 .Build();
 
+            TelemetryHelper.Singleton.LogInfo(
+                "Starting changefeed processor '{0}' on host '{1}'",
+                this.processorName,
+                hostName);
             await this.changeFeedProcessor.StartAsync().ConfigureAwait(false);
 
             return this.changeFeedProcessor;
@@ -208,7 +221,7 @@ namespace Migration.Executor.WebJob
                 BulkOperationResponse<DocumentMetadata> bulkOperationResponse = await bulkOperations.ExecuteAsync().ConfigureAwait(false);
                 if (bulkOperationResponse.Failures.Count > 0 && this.deadletterClient != null)
                 {
-                    await WriteFailedDocsToBlob("FailedImportDocs", this.deadletterClient, bulkOperationResponse)
+                    await this.WriteFailedDocsToBlob("FailedImportDocs", this.deadletterClient, bulkOperationResponse)
                         .ConfigureAwait(false);
                 }
                 TelemetryHelper.Singleton.LogMetrics(bulkOperationResponse);
@@ -216,14 +229,15 @@ namespace Migration.Executor.WebJob
             catch (Exception error)
             {
                 TelemetryHelper.Singleton.LogError(
-                    "Processing changes failed: {0}",
+                    "Processing changes in change feed processor {0} failed: {1}",
+                    this.processorName,
                     error);
 
                 throw;
             }
         }
 
-        private static async Task WriteFailedDocsToBlob(
+        private async Task WriteFailedDocsToBlob(
             string failureType,
             BlobContainerClient containerClient,
             BulkOperationResponse<DocumentMetadata> bulkOperationResponse)
@@ -248,12 +262,15 @@ namespace Migration.Executor.WebJob
                 }
 
                 TelemetryHelper.Singleton.LogWarning(
-                    "FAILED TO INGEST DOCUMENTS: Writing {0} failed documents to the deadletter blob store.", bulkOperationResponse.FailedDocs.Count);
+                    "Processor {0} - FAILED TO INGEST DOCUMENTS: Writing {1} failed documents to the deadletter blob store.",
+                    this.processorName,
+                    bulkOperationResponse.FailedDocs.Count);
             }
             catch (Exception error)
             {
                 TelemetryHelper.Singleton.LogError(
-                    "Writing dcoument to deadletter blob store failed: {0}",
+                    "Change feed processor {0} - Writing document to deadletter blob store failed: {1}",
+                    this.processorName,
                     error);
 
                 throw;
