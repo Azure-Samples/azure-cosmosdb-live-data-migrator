@@ -66,6 +66,9 @@ namespace Migration.Shared.DataContracts
         [JsonProperty("statistics.lastUpdated")]
         public long StatisticsLastUpdatedEpochMs { get; set; }
 
+        [JsonProperty("statistics.lastMigrationActivity")]
+        public long StatisticsLastMigrationActivityRecordedEpochMs { get; set; }
+
         /// <summary>
         /// Gets the entity tag associated with the resource from the Azure Cosmos DB service.
         /// </summary>

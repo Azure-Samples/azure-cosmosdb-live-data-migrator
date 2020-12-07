@@ -173,10 +173,11 @@ namespace Migration.Monitor.WebJob
                         currentDestinationCollectionCount * 100.0 / sourceCollectionCount;
                     long insertedCount =
                         currentDestinationCollectionCount - migrationConfigSnapshot.MigratedDocumentCount;
+
                     double currentRate = insertedCount * 1000.0 / SleepTime;
                     DateTime currentTime = DateTime.UtcNow;
                     long nowEpochMs = now.ToUnixTimeMilliseconds();
-                    long totalSeconds = (nowEpochMs - migrationConfigSnapshot.StartTimeEpochMs) / 1000;
+                    long totalSeconds = (nowEpochMs - migrationConfigSnapshot.StatisticsLastMigrationActivityRecordedEpochMs) / 1000;
                     double averageRate = totalSeconds > 0 ? currentDestinationCollectionCount / totalSeconds : 0;
 
                     long etaMs = averageRate > 0
@@ -190,6 +191,11 @@ namespace Migration.Monitor.WebJob
                     migrationConfigSnapshot.DestinationCountSnapshot = currentDestinationCollectionCount;
                     migrationConfigSnapshot.PercentageCompleted = currentPercentage;
                     migrationConfigSnapshot.StatisticsLastUpdatedEpochMs = nowEpochMs;
+                    migrationConfigSnapshot.MigratedDocumentCount = currentDestinationCollectionCount;
+                    if (insertedCount > 0)
+                    {
+                        migrationConfigSnapshot.StatisticsLastMigrationActivityRecordedEpochMs = nowEpochMs;
+                    }
 
                     try
                     {
