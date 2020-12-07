@@ -174,10 +174,15 @@ namespace Migration.Monitor.WebJob
                     long insertedCount =
                         currentDestinationCollectionCount - migrationConfigSnapshot.MigratedDocumentCount;
 
-                    double currentRate = insertedCount * 1000.0 / SleepTime;
-                    DateTime currentTime = DateTime.UtcNow;
+                    long lastMigrationActivityRecorded = Math.Max(
+                            migrationConfigSnapshot.StatisticsLastMigrationActivityRecordedEpochMs,
+                            migrationConfigSnapshot.StartTimeEpochMs);
                     long nowEpochMs = now.ToUnixTimeMilliseconds();
-                    long totalSeconds = (nowEpochMs - migrationConfigSnapshot.StatisticsLastMigrationActivityRecordedEpochMs) / 1000;
+
+                    double currentRate = insertedCount * 1000.0 / (nowEpochMs - lastMigrationActivityRecorded);
+                    
+                    long totalSeconds = 
+                        (lastMigrationActivityRecorded - migrationConfigSnapshot.StartTimeEpochMs) / 1000;
                     double averageRate = totalSeconds > 0 ? currentDestinationCollectionCount / totalSeconds : 0;
 
                     long etaMs = averageRate > 0
