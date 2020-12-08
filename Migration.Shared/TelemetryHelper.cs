@@ -17,17 +17,14 @@ namespace Migration.Shared
 
         private TelemetryHelper(
             TelemetryClient client,
-            string sourceName,
-            string hostName)
+            string sourceName)
         {
             if (String.IsNullOrWhiteSpace(sourceName)) { throw new ArgumentNullException(nameof(sourceName)); }
-            if (String.IsNullOrWhiteSpace(hostName)) { throw new ArgumentNullException(nameof(hostName)); }
 
             this.client = client ?? throw new ArgumentNullException(nameof(client));
             this.defaultProperties = new Dictionary<string, string>
             {
                 { "Source", sourceName },
-                { "MachineName", hostName }
             };
         }
 
@@ -46,10 +43,9 @@ namespace Migration.Shared
 
         public static void Initilize(
             TelemetryConfiguration telemetryConfig,
-            string sourceName,
-            string hostName)
+            string sourceName)
         {
-            singletonInstance = new TelemetryHelper(new TelemetryClient(telemetryConfig), sourceName, hostName);
+            singletonInstance = new TelemetryHelper(new TelemetryClient(telemetryConfig), sourceName);
         }
 
         public void LogInfo(string format, params object[] args)

@@ -39,7 +39,7 @@ namespace Migration.Monitor.WebJob
 
                 TelemetryConfiguration telemetryConfig = new TelemetryConfiguration(
                     EnvironmentConfig.Singleton.AppInsightsInstrumentationKey);
-                TelemetryHelper.Initilize(telemetryConfig, SourceName, Environment.MachineName);
+                TelemetryHelper.Initilize(telemetryConfig, SourceName);
             }
             catch (Exception error)
             {
