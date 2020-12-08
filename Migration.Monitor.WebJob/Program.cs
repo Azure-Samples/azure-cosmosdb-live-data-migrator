@@ -186,8 +186,8 @@ namespace Migration.Monitor.WebJob
                     double averageRate = totalSeconds > 0 ? currentDestinationCollectionCount / totalSeconds : 0;
 
                     long etaMs = averageRate > 0
-                        ? (long)((sourceCollectionCount - currentDestinationCollectionCount) * 1000 / (averageRate * 3600))
-                        : (long)TimeSpan.FromDays(100).TotalMilliseconds - migrationConfigSnapshot.StartTimeEpochMs;
+                        ? (long)((sourceCollectionCount - currentDestinationCollectionCount) * 1000 / averageRate)
+                        : (long)TimeSpan.FromDays(100).TotalMilliseconds;
 
                     migrationConfigSnapshot.ExpectedDurationLeft = etaMs;
                     migrationConfigSnapshot.AvgRate = averageRate;
