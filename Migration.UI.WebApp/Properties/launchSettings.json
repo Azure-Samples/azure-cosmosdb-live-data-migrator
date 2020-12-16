@@ -1,0 +1,42 @@
+{
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:57392",
+      "sslPort": 44369
+    }
+  },
+  "profiles": {
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "cosmosdbaccount": "fabianm-migration16-cdb",
+        "keyvaulturi": "https://fabianmmikvbv4resmt5miqw.vault.azure.net/",
+        "defaultdestinationaccount": "fabianm-migration16-cdb",
+        "defaultsourceaccount": "fabianm-migration16-cdb",
+        "cosmosdbdb": "MigrationServiceDB",
+        "cosmosdbleasescollection": "Leases",
+        "allowedUsers": "fabianmm@microsoft.com|f46ef4f0-08c9-4d72-bb77-bab55b3f801a",
+        "appinsightsinstrumentationkey": "379aec44-bd34-4a8c-a2e8-455db9b49443",
+        "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+        "cosmosdbcollection": "MigrationStatus",
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation",
+        "AzureAd:TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+        "AzureAd:ClientId": "95cd656b-9369-411e-9274-a51d12c9c020",
+        "AzureAd:Domain": "microsoft.onmicrosoft.com"
+      }
+    },
+    "Migration.UI.WebApp": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation"
+      },
+      "applicationUrl": "https://localhost:5001;http://localhost:5000"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+﻿@page
+@model Migration.UI.WebApp.Pages.NewMigrationModel
+@{
+    ViewData["Title"] = "Create new Migration";
+}
+
+<div class="text-center">
+    <h1 class="display-4">New Migration</h1>
+</div>
+<form method="post">
+    <table>
+        <thead>
+            <tr>
+                <td class="idColumn" style="min-width: 10%" />
+                <td class="sourceColumn" style="min-width: 35%" ><b>Source</b></td>
+                <td class="destinationColumn"style="min-width: 35%"><b>Destination</b></td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><b>Id:</b></td>
+                <td colspan="2"><input type="text" id="txtId" name="id" value="@Guid.NewGuid().ToString("N")" readonly="readonly" style="min-width: 100%"  /></td>
+            </tr>
+            <tr>
+                <td><b>Account:</b></td>
+                <td><input type="text" id="txtSourceAccount" name="sourceAccount" value="@MigrationConfigDal.Singleton.DefaultSourceAccount" style="min-width: 400px" /></td>
+                <td><input type="text" id="txtDestinationAccount" name="destinationAccount" value="@MigrationConfigDal.Singleton.DefaultDestinationAccount" style="min-width: 400px" /></td>
+            </tr>
+            <tr>
+                <td><b>DB:</b></td>
+                <td><input type="text" id="txtSourceDatabase" name="sourceDatabase" style="min-width: 400px" /></td>
+                <td><input type="text" id="txtDestinationDatabase" name="destinationDatabase" style="min-width: 400px" /></td>
+            </tr>
+            <tr>
+                <td><b>Container:</b></td>
+                <td><input type="text" id="txtSourceContainer" name="sourceContainer" style="min-width: 400px" /></td>
+                <td><input type="text" id="txtDestinationContainer" name="destinationContainer" style="min-width: 400px" /></td>
+            </tr>
+            <tr>
+                <td><b>PK:</b></td>
+                <td><input type="text" id="txtSourcePK" name="sourcePK" style="min-width: 400px" /></td>
+                <td><input type="text" id="txtDestinationPK" name="destinationPK" style="min-width: 400px" /></td>
+            </tr>
+        </tbody>
+    </table>
+    <input type="submit" id="btnCreateAndStart" name="CreateAndStart" value="Create/Start" asp-page-handler="Submit" />
+</form>
