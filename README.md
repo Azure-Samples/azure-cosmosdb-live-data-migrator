@@ -109,12 +109,10 @@ The Cosmos DB Live Data Migrator provides the following features:
 
 #### Deployment
 
-- \-     Go back to Go to [GitHub - FabianMeiswinkel/azure-cosmosdb-live-data-migrator: Cosmos DB Live migration service to transfer data from one Container to another.](https://github.com/FabianMeiswinkel/azure-cosmosdb-live-data-migrator) …
-
-  <u></u>\-     … and click the “Deploy to Azure” button
+Click the button below:
 
 <br/>
-<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FFabianMeiswinkel%2Fazure-cosmosdb-live-data-migrator%2Fmaster%2FMigration.ResourceGroup%2FMigrationServices.json" target="_blank">    <img src="https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true"/></a>
+<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fazure-cosmosdb-live-data-migrator%2Fmaster%2FMigration.ResourceGroup%2FMigrationServices.json" target="_blank">    <img src="https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true"/></a>
 
 <br/>
 
