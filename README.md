@@ -1,6 +1,14 @@
 # Azure Cosmos DB Live Data Migrator
 Simple and reliable service to transfer data from one Cosmos DB SQL API container to another in a live fashion.
 
+
+
+## IMPORTANT
+
+The purpose of this tool is to allow starting the migration of data significantly ahead of the actual cut-over date. Every migration started will use the change feed of the source container to listen on updates to be migrated to the destination. It is strongly advised to migrate the bulk of items using this mechanism at least several days before the cut-over-date to reduce the risk of unnecessary fire-drills due to unexpected delays or issues identified during migration. 
+
+
+
 ## Features
 
 The Cosmos DB Live Data Migrator provides the following features:
