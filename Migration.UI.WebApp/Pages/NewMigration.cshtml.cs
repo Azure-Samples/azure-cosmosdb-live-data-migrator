@@ -22,7 +22,7 @@ namespace Migration.UI.WebApp.Pages
         {
             MigrationConfig newConfig = new MigrationConfig
             {
-                Id = id,
+                Id = id != null && id.StartsWith("/") ? id[1..] : id,
                 MonitoredAccount = sourceAccount,
                 MonitoredDbName = sourceDatabase,
                 MonitoredCollectionName = sourceContainer,
