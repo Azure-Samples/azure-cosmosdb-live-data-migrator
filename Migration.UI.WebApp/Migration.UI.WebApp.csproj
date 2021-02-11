@@ -5,7 +5,7 @@
     <UserSecretsId>aspnet-Migration.UI.WebApp-B4E15B89-894D-44F4-8F6E-9F4EB2765B5E</UserSecretsId>
     <WebProject_DirectoryAccessLevelKey>0</WebProject_DirectoryAccessLevelKey>
     <CopyRefAssembliesToPublishDirectory>false</CopyRefAssembliesToPublishDirectory>
-    <Version>2.0.0</Version>
+    <Version>2.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>

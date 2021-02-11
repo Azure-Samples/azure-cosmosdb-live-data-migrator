@@ -19,7 +19,7 @@
         <tbody>
             <tr>
                 <td><b>Id:</b></td>
-                <td colspan="2"><input type="text" id="txtId" name="id" value="@Guid.NewGuid().ToString("N")" readonly="readonly" style="min-width: 100%"  /></td>
+                <td colspan="2"><input type="text" id="txtId" name="id" value="@Guid.NewGuid().ToString("N")" readonly="readonly" style="min-width: 100%" /></td>
             </tr>
             <tr>
                 <td><b>Account:</b></td>
@@ -40,6 +40,10 @@
                 <td><b>PK:</b></td>
                 <td><input type="text" id="txtSourcePK" name="sourcePK" style="min-width: 400px" /></td>
                 <td><input type="text" id="txtDestinationPK" name="destinationPK" style="min-width: 400px" /></td>
+            </tr>
+            <tr>
+                <td colspan="2"><b>Only missing docuemnts?</b></td>
+                <td><input type="checkbox" id="chkOnlyMissingDocuments" name="onlyMissingDocuments" /></td>
             </tr>
         </tbody>
     </table>

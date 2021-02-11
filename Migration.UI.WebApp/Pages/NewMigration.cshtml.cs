@@ -17,7 +17,8 @@ namespace Migration.UI.WebApp.Pages
             string destinationAccount,
             string destinationDatabase,
             string destinationContainer,
-            string destinationPK)
+            string destinationPK,
+            bool onlyMissingDocuments)
         {
             MigrationConfig newConfig = new MigrationConfig
             {
@@ -31,7 +32,8 @@ namespace Migration.UI.WebApp.Pages
                 DestCollectionName = destinationContainer,
                 TargetPartitionKey = destinationPK,
                 Completed = false,
-                StartTimeEpochMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                StartTimeEpochMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                OnlyInsertMissingItems = onlyMissingDocuments,
             };
 
             await MigrationConfigDal.Singleton

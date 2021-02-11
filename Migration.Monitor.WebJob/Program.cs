@@ -71,7 +71,6 @@ namespace Migration.Monitor.WebJob
         private static async Task RunAsync()
         {
             await Task.Yield();
-            SemaphoreSlim concurrencySemaphore = new SemaphoreSlim(MaxConcurrentMonitoringJobs);
 
             using (CosmosClient client =
                KeyVaultHelper.Singleton.CreateCosmosClientFromKeyVault(
@@ -91,35 +90,55 @@ namespace Migration.Monitor.WebJob
 
                 while (true)
                 {
-                    List<MigrationConfig> configDocs = new List<MigrationConfig>();
-                    FeedIterator<MigrationConfig> iterator = container.GetItemQueryIterator<MigrationConfig>(
-                        "select * from c where NOT c.completed");
-
-                    while (iterator.HasMoreResults)
+                    try
                     {
-                        FeedResponse<MigrationConfig> response = await iterator.ReadNextAsync().ConfigureAwait(false);
-                        configDocs.AddRange(response.Resource);
-                    }
 
-                    if (configDocs.Count == 0)
-                    {
-                        TelemetryHelper.Singleton.LogInfo(
-                            "No Migration to monitor for process '{0}'",
-                            Process.GetCurrentProcess().Id);
-                    }
-                    else
-                    {
-                        TelemetryHelper.Singleton.LogInfo(
-                            "Starting to monitor migration by process '{0}'",
-                            Process.GetCurrentProcess().Id);
+                        List<MigrationConfig> configDocs = new List<MigrationConfig>();
+                        FeedIterator<MigrationConfig> iterator = container.GetItemQueryIterator<MigrationConfig>(
+                            "select * from c where NOT c.completed");
 
-                        Task[] tasks = new Task[configDocs.Count];
-                        for (int i = 0; i < tasks.Length; i++)
+                        while (iterator.HasMoreResults)
                         {
-                            await concurrencySemaphore.WaitAsync().ConfigureAwait(false);
-                            await TrackMigrationProgressAsync(container, configDocs[i], concurrencySemaphore)
-                                .ConfigureAwait(false);
+                            FeedResponse<MigrationConfig> response = await iterator.ReadNextAsync().ConfigureAwait(false);
+                            configDocs.AddRange(response.Resource);
                         }
+
+                        if (configDocs.Count == 0)
+                        {
+                            TelemetryHelper.Singleton.LogInfo(
+                                "No Migration to monitor for process '{0}'",
+                                Process.GetCurrentProcess().Id);
+                        }
+                        else
+                        {
+                            TelemetryHelper.Singleton.LogInfo(
+                                "Starting to monitor migration by process '{0}' for {1} active migrations",
+                                Process.GetCurrentProcess().Id,
+                                configDocs.Count);
+
+                            for (int i = 0; i < configDocs.Count; i++)
+                            {
+                                TelemetryHelper.Singleton.LogInfo(
+                                    "Starting to retrieve migration status for migration '{0}/{1}' ({2})",
+                                    configDocs[i].DestDbName,
+                                    configDocs[i].DestCollectionName,
+                                    configDocs[i].Id);
+
+                                await TrackMigrationProgressAsync(container, configDocs[i])
+                                    .ConfigureAwait(false);
+
+                                TelemetryHelper.Singleton.LogInfo(
+                                    "Retrieved migration status for migration '{0}/{1}' ({2})",
+                                    configDocs[i].DestDbName,
+                                    configDocs[i].DestCollectionName,
+                                    configDocs[i].Id);
+                            }
+                        }
+                    }
+                    catch (Exception error)
+                    {
+                        TelemetryHelper.Singleton.LogWarning("Failed to retrieve migration statistics. Retrying... Exception: {0}",
+                            error);
                     }
 
                     await Task.Delay(SleepTime).ConfigureAwait(false);
@@ -127,118 +146,144 @@ namespace Migration.Monitor.WebJob
             }
         }
 
-        private static async Task<long> GetDoucmentCountAsync(Container container)
+        private static async Task<long> GetDocumentCountAsync(Container container)
         {
             if (container == null) { throw new ArgumentNullException(nameof(container)); }
 
-            FeedIterator<long> iterator = container.GetItemQueryIterator<long>(
-                "SELECT VALUE COUNT(1) FROM c");
+            TelemetryHelper.Singleton.LogInfo(
+                            "Retrieving document count of container '{0}/{1}'",
+                            container.Database.Id,
+                            container.Id);
 
-            return (await iterator.ReadNextAsync().ConfigureAwait(false)).Resource.Single();
+            try
+            {
+                ContainerRequestOptions requestOptions = new ContainerRequestOptions { PopulateQuotaInfo = true };
+                ContainerResponse result = await container.ReadContainerAsync(requestOptions);
+                string usage = result.Headers["x-ms-resource-usage"];
+                string[] quotas = usage.Split(";");
+                const string DocumentsCountPrefix = "documentsCount=";
+
+                long count = long.Parse(
+                    quotas.Single(q => q.StartsWith(DocumentsCountPrefix))[DocumentsCountPrefix.Length..]);
+
+                TelemetryHelper.Singleton.LogInfo(
+                    "Retrieved document count of container '{0}/{1}' - {2}",
+                    container.Database.Id,
+                    container.Id,
+                    count);
+
+                return count;
+            }
+            catch(Exception error)
+            {
+                TelemetryHelper.Singleton.LogInfo(
+                   "Faield to retrieve document count of container '{0}/{1}' - Exception: {2}",
+                   container.Database.Id,
+                   container.Id,
+                   error);
+
+                throw;
+            }
         }
 
         private static async Task TrackMigrationProgressAsync(
             Container migrationContainer,
-            MigrationConfig migrationConfig,
-            SemaphoreSlim concurrencySempahore)
+            MigrationConfig migrationConfig)
         {
             if (migrationContainer == null) { throw new ArgumentNullException(nameof(migrationContainer)); }
             if (migrationConfig == null) { throw new ArgumentNullException(nameof(migrationConfig)); }
-            if (concurrencySempahore == null) { throw new ArgumentNullException(nameof(concurrencySempahore)); }
 
-            try
+            CosmosClient sourceClient = GetOrCreateSourceCosmosClient(migrationConfig.MonitoredAccount);
+            CosmosClient destinationClient = GetOrCreateSourceCosmosClient(migrationConfig.DestAccount);
+            Container sourceContainer = sourceClient.GetContainer(
+                migrationConfig.MonitoredDbName,
+                migrationConfig.MonitoredCollectionName);
+            Container destinationContainer = destinationClient.GetContainer(
+                migrationConfig.DestDbName,
+                migrationConfig.DestCollectionName);
+
+            while (true)
             {
-                CosmosClient sourceClient = GetOrCreateSourceCosmosClient(migrationConfig.MonitoredAccount);
-                CosmosClient destinationClient = GetOrCreateSourceCosmosClient(migrationConfig.DestAccount);
-                Container sourceContainer = sourceClient.GetContainer(
-                    migrationConfig.MonitoredDbName,
-                    migrationConfig.MonitoredCollectionName);
-                Container destinationContainer = destinationClient.GetContainer(
-                    migrationConfig.DestDbName,
-                    migrationConfig.DestCollectionName);
+                MigrationConfig migrationConfigSnapshot = await migrationContainer
+                    .ReadItemAsync<MigrationConfig>(migrationConfig.Id, new PartitionKey(migrationConfig.Id))
+                    .ConfigureAwait(false);
 
-                while (true)
-                {
-                    MigrationConfig migrationConfigSnapshot = await migrationContainer
-                        .ReadItemAsync<MigrationConfig>(migrationConfig.Id, new PartitionKey(migrationConfig.Id))
-                        .ConfigureAwait(false);
+                DateTimeOffset now = DateTimeOffset.UtcNow;
 
-                    DateTimeOffset now = DateTimeOffset.UtcNow;
+                long sourceCollectionCount = await GetDocumentCountAsync(sourceContainer).ConfigureAwait(false);
+                long currentDestinationCollectionCount = await GetDocumentCountAsync(destinationContainer)
+                    .ConfigureAwait(false);
+                double currentPercentage = sourceCollectionCount == 0 ?
+                    100 :
+                    currentDestinationCollectionCount * 100.0 / sourceCollectionCount;
+                long insertedCount =
+                    currentDestinationCollectionCount - migrationConfigSnapshot.MigratedDocumentCount;
 
-                    long sourceCollectionCount = await GetDoucmentCountAsync(sourceContainer).ConfigureAwait(false);
-                    long currentDestinationCollectionCount = await GetDoucmentCountAsync(destinationContainer)
-                        .ConfigureAwait(false);
-                    double currentPercentage = sourceCollectionCount == 0 ?
-                        100 :
-                        currentDestinationCollectionCount * 100.0 / sourceCollectionCount;
-                    long insertedCount =
-                        currentDestinationCollectionCount - migrationConfigSnapshot.MigratedDocumentCount;
+                long lastMigrationActivityRecorded = Math.Max(
+                        migrationConfigSnapshot.StatisticsLastMigrationActivityRecordedEpochMs,
+                        migrationConfigSnapshot.StartTimeEpochMs);
+                long nowEpochMs = now.ToUnixTimeMilliseconds();
 
-                    long lastMigrationActivityRecorded = Math.Max(
-                            migrationConfigSnapshot.StatisticsLastMigrationActivityRecordedEpochMs,
-                            migrationConfigSnapshot.StartTimeEpochMs);
-                    long nowEpochMs = now.ToUnixTimeMilliseconds();
-
-                    double currentRate = insertedCount * 1000.0 / (nowEpochMs - lastMigrationActivityRecorded);
+                double currentRate = nowEpochMs != lastMigrationActivityRecorded ? insertedCount * 1000.0 / (nowEpochMs - lastMigrationActivityRecorded) : 0;
                     
-                    long totalSeconds = 
-                        (lastMigrationActivityRecorded - migrationConfigSnapshot.StartTimeEpochMs) / 1000;
-                    double averageRate = totalSeconds > 0 ? currentDestinationCollectionCount / totalSeconds : 0;
+                long totalSeconds = 
+                    (lastMigrationActivityRecorded - migrationConfigSnapshot.StartTimeEpochMs) / 1000;
+                double averageRate = totalSeconds > 0 ? currentDestinationCollectionCount / totalSeconds : 0;
 
-                    long etaMs = averageRate > 0
-                        ? (long)((sourceCollectionCount - currentDestinationCollectionCount) * 1000 / averageRate)
-                        : (long)TimeSpan.FromDays(100).TotalMilliseconds;
+                long etaMs = averageRate > 0
+                    ? (long)((sourceCollectionCount - currentDestinationCollectionCount) * 1000 / averageRate)
+                    : (long)TimeSpan.FromDays(100).TotalMilliseconds;
 
-                    migrationConfigSnapshot.ExpectedDurationLeft = etaMs;
-                    migrationConfigSnapshot.AvgRate = averageRate;
-                    migrationConfigSnapshot.CurrentRate = currentRate;
-                    migrationConfigSnapshot.SourceCountSnapshot = sourceCollectionCount;
-                    migrationConfigSnapshot.DestinationCountSnapshot = currentDestinationCollectionCount;
-                    migrationConfigSnapshot.PercentageCompleted = currentPercentage;
-                    migrationConfigSnapshot.StatisticsLastUpdatedEpochMs = nowEpochMs;
-                    migrationConfigSnapshot.MigratedDocumentCount = currentDestinationCollectionCount;
-                    if (insertedCount > 0)
-                    {
-                        migrationConfigSnapshot.StatisticsLastMigrationActivityRecordedEpochMs = nowEpochMs;
-                    }
-
-                    try
-                    {
-                        ItemResponse<MigrationConfig> response = await migrationContainer
-                            .ReplaceItemAsync(
-                                migrationConfigSnapshot,
-                                migrationConfigSnapshot.Id,
-                                new PartitionKey(migrationConfigSnapshot.Id),
-                                new ItemRequestOptions
-                                {
-                                    IfMatchEtag = migrationConfigSnapshot.ETag
-                                })
-                            .ConfigureAwait(false);
-                    }
-                    catch (CosmosException error)
-                    {
-                        if (error.StatusCode == System.Net.HttpStatusCode.PreconditionFailed)
-                        {
-                            continue;
-                        }
-
-                        throw;
-                    }
-
-                    TelemetryHelper.Singleton.TrackStatistics(
-                        sourceCollectionCount,
-                        currentDestinationCollectionCount,
-                        currentPercentage,
-                        currentRate,
-                        averageRate,
-                        etaMs);
-
-                    return;
+                migrationConfigSnapshot.ExpectedDurationLeft = etaMs;
+                migrationConfigSnapshot.AvgRate = averageRate;
+                migrationConfigSnapshot.CurrentRate = currentRate;
+                migrationConfigSnapshot.SourceCountSnapshot = sourceCollectionCount;
+                migrationConfigSnapshot.DestinationCountSnapshot = currentDestinationCollectionCount;
+                migrationConfigSnapshot.PercentageCompleted = currentPercentage;
+                migrationConfigSnapshot.StatisticsLastUpdatedEpochMs = nowEpochMs;
+                migrationConfigSnapshot.MigratedDocumentCount = currentDestinationCollectionCount;
+                if (insertedCount > 0)
+                {
+                    migrationConfigSnapshot.StatisticsLastMigrationActivityRecordedEpochMs = nowEpochMs;
                 }
-            }
-            finally
-            {
-                concurrencySempahore.Release();
+
+                try
+                {
+                    ItemResponse<MigrationConfig> response = await migrationContainer
+                        .ReplaceItemAsync(
+                            migrationConfigSnapshot,
+                            migrationConfigSnapshot.Id,
+                            new PartitionKey(migrationConfigSnapshot.Id),
+                            new ItemRequestOptions
+                            {
+                                IfMatchEtag = migrationConfigSnapshot.ETag
+                            })
+                        .ConfigureAwait(false);
+                }
+                catch (CosmosException error)
+                {
+                    if (error.StatusCode == System.Net.HttpStatusCode.PreconditionFailed)
+                    {
+                        TelemetryHelper.Singleton.LogInfo(
+                            "Conflict when trying to update statistics for migration '{0}/{1}' ({2})",
+                            migrationConfig.DestDbName,
+                            migrationConfig.DestCollectionName,
+                            migrationConfig.Id);
+                        continue;
+                    }
+
+                    throw;
+                }
+
+                TelemetryHelper.Singleton.TrackStatistics(
+                    sourceCollectionCount,
+                    currentDestinationCollectionCount,
+                    currentPercentage,
+                    currentRate,
+                    averageRate,
+                    etaMs);
+
+                return;
             }
         }
 
