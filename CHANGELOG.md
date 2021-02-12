@@ -2,6 +2,20 @@
 
 <a name="2.0.0"></a>
 
+
+
+# 2.0.1 (2021-02-11)
+
+*Features*
+
+* Option to create a migration to only insert missing documents. This can be useful if documents have been written to the poison message location initially to reprocess just documents that don't exist in the destination yet.
+
+*Bug Fixes*
+
+* The Monitoring WebApp calculates the number of documents by running a query. Especially for large containers this is less efficient than retrieving the quota info from the Container metadata. So using that approach going forward.
+
+
+
 # 2.0.0 (2020-12-04)
 
 *Features*

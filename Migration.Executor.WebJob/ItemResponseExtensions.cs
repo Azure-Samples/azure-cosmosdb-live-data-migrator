@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
 using Migration.Shared.DataContracts;
@@ -10,7 +11,8 @@ namespace Migration.Executor.WebJob
     {
         public static Task<OperationResponse<T>> CaptureOperationResponse<T>(
             this Task<ItemResponse<T>> task,
-            T item)
+            T item,
+            Boolean ignoreConflicts)
         {
             return task.ContinueWith(itemResponse =>
             {
@@ -29,6 +31,16 @@ namespace Migration.Executor.WebJob
                     .InnerExceptions
                     .FirstOrDefault(innerEx => innerEx is CosmosException) is CosmosException cosmosException)
                 {
+                    if (ignoreConflicts && cosmosException.StatusCode == HttpStatusCode.Conflict)
+                    {
+                        return new OperationResponse<T>()
+                        {
+                            Item = item,
+                            IsSuccessful = true,
+                            RequestUnitsConsumed = task?.Result?.RequestCharge ?? 0
+                        };
+                    }
+
                     return new OperationResponse<T>()
                     {
                         Item = item,

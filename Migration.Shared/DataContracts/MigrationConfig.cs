@@ -36,6 +36,9 @@ namespace Migration.Shared.DataContracts
         [JsonProperty("completed")]
         public bool Completed { get; set; }
 
+        [JsonProperty("onlyInsertMissingItems")]
+        public bool OnlyInsertMissingItems { get; set; }
+
         [JsonProperty("id")]
         public string Id { get; set; }
 

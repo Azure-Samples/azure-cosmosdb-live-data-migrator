@@ -214,9 +214,18 @@ namespace Migration.Executor.WebJob
                     document = (this.SourcePartitionKeys != null & this.TargetPartitionKey != null) ?
                         MapPartitionKey(doc, isSyntheticKey, this.TargetPartitionKey, isNestedAttribute, this.SourcePartitionKeys) :
                         document = doc;
-                    bulkOperations.Tasks.Add(this.containerToStoreDocuments.UpsertItemAsync(
-                        item: document,
-                        cancellationToken: cancellationToken).CaptureOperationResponse(document));
+                    if (this.config.OnlyInsertMissingItems)
+                    {
+                        bulkOperations.Tasks.Add(this.containerToStoreDocuments.CreateItemAsync(
+                            item: document,
+                            cancellationToken: cancellationToken).CaptureOperationResponse(document, ignoreConflicts: true));
+                    }
+                    else
+                    {
+                        bulkOperations.Tasks.Add(this.containerToStoreDocuments.UpsertItemAsync(
+                            item: document,
+                            cancellationToken: cancellationToken).CaptureOperationResponse(document, ignoreConflicts: true));
+                    }
                 }
                 BulkOperationResponse<DocumentMetadata> bulkOperationResponse = await bulkOperations.ExecuteAsync().ConfigureAwait(false);
                 if (bulkOperationResponse.Failures.Count > 0 && this.deadletterClient != null)
