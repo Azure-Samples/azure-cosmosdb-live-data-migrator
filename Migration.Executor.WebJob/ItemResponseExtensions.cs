@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
 using Migration.Shared.DataContracts;
@@ -30,7 +31,7 @@ namespace Migration.Executor.WebJob
                     .InnerExceptions
                     .FirstOrDefault(innerEx => innerEx is CosmosException) is CosmosException cosmosException)
                 {
-                    if (ignoreConflicts)
+                    if (ignoreConflicts && cosmosException.StatusCode == HttpStatusCode.Conflict)
                     {
                         return new OperationResponse<T>()
                         {
