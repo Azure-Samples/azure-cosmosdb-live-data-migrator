@@ -29,6 +29,7 @@ namespace Migration.Executor.WebJob
         private readonly string TargetPartitionKey;
         private readonly BlobContainerClient deadletterClient;
         private readonly string processorName;
+        private readonly int withMaxItems;
 
         private readonly MigrationConfig config;
         private ChangeFeedProcessor changeFeedProcessor;
@@ -39,6 +40,7 @@ namespace Migration.Executor.WebJob
             this.config = config ?? throw new ArgumentNullException(nameof(config));
             this.SourcePartitionKeys = config.SourcePartitionKeys;
             this.TargetPartitionKey = config.TargetPartitionKey;
+            this.withMaxItems =  config.ChangeFeedMaxItems == null ? 1000 : Int32.Parse(config.ChangeFeedMaxItems);
 
             this.leaseCollectionClient = KeyVaultHelper.Singleton.CreateCosmosClientFromKeyVault(
                     EnvironmentConfig.Singleton.MigrationMetadataCosmosAccountName,
@@ -178,6 +180,8 @@ namespace Migration.Executor.WebJob
                 }
             }
 
+            Console.WriteLine("this.withMaxItems: "+ this.withMaxItems);
+            TimeSpan interval = new TimeSpan(0, 0, 5);
             this.changeFeedProcessor = this.sourceCollectionClient.GetContainer(this.config.MonitoredDbName, this.config.MonitoredCollectionName)
                 .GetChangeFeedProcessorBuilder<DocumentMetadata>(this.processorName, this.ProcessChangesAsync)
                 .WithInstanceName(hostName)
@@ -187,7 +191,8 @@ namespace Migration.Executor.WebJob
                         EnvironmentConfig.Singleton.MigrationLeasesContainerName))
                 .WithLeaseConfiguration(TimeSpan.FromSeconds(30))
                 .WithStartTime(starttime)
-                .WithMaxItems(1000)
+                .WithMaxItems(this.withMaxItems)
+                //.WithPollInterval(interval)
                 .Build();
 
             TelemetryHelper.Singleton.LogInfo(

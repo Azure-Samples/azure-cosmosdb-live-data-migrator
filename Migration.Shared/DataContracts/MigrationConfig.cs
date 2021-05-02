@@ -6,6 +6,9 @@ namespace Migration.Shared.DataContracts
 {
     public class MigrationConfig
     {
+        [JsonProperty("ChangeFeedMaxItems")]
+        public string ChangeFeedMaxItems { get; set; }
+
         [JsonProperty("sourcePartitionKeys")]
         public string SourcePartitionKeys { get; set; }
 
