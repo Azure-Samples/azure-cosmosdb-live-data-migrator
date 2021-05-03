@@ -190,7 +190,7 @@ Click the button below:
   - **<u>Container</u>** – the names of the source and destination containers.
   - **<u>PK</u>** – The partition key definitions of the source and destination container. If your partition key is “/id” in the source container and you would want to use “/pk” in the destination container after migration you would enter “id” and “pk” in these fields.
   - **<u>Only missing documents?</u>** - In cases where transient errors occur during migration (such as a temporary DC outage), you can check this box in order to migrate only missing documents (i.e. ignore documents that already exist in the target container).
-  - **<u>Change Feed Max Items?</u>** - Sets the maximum number of items to be returned in a Change Feed Request. If no value is entered, the default will be 1000. You can increase this value to achieve greater client-side throughput for larger migrations (as long as doing so does not also result in hitting the 4MB response size limit).
+  - **<u>Change Feed Max Items?</u>** - Sets the maximum number of items to be returned in a Change Feed Request. If no value is entered, the default will be 1000. Increasing this value may be able to achieve greater client-side throughput for large migrations where normalized RU consumption in the target container is very low (and as long as increasing max items does not also result in rate limiting, or hitting the 4MB response size limit).
 
 - Click “Create/Start”
 
