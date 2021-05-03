@@ -180,8 +180,6 @@ namespace Migration.Executor.WebJob
                 }
             }
 
-            Console.WriteLine("this.withMaxItems: "+ this.withMaxItems);
-            TimeSpan interval = new TimeSpan(0, 0, 5);
             this.changeFeedProcessor = this.sourceCollectionClient.GetContainer(this.config.MonitoredDbName, this.config.MonitoredCollectionName)
                 .GetChangeFeedProcessorBuilder<DocumentMetadata>(this.processorName, this.ProcessChangesAsync)
                 .WithInstanceName(hostName)
@@ -192,7 +190,6 @@ namespace Migration.Executor.WebJob
                 .WithLeaseConfiguration(TimeSpan.FromSeconds(30))
                 .WithStartTime(starttime)
                 .WithMaxItems(this.withMaxItems)
-                //.WithPollInterval(interval)
                 .Build();
 
             TelemetryHelper.Singleton.LogInfo(
