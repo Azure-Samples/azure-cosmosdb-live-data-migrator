@@ -191,7 +191,7 @@ Click the button below:
   - **<u>PK</u>** – The partition key definitions of the source and destination container. If your partition key is “/id” in the source container and you would want to use “/pk” in the destination container after migration you would enter “id” and “pk” in these fields.
   - **<u>Only missing documents?</u>** - In cases where transient errors occur during migration (such as a temporary DC outage), you can check this box in order to migrate only missing documents (i.e. ignore documents that already exist in the target container).
   - **<u>Change Feed Max Items?</u>** - Sets the maximum number of items to be returned in a Change Feed Request. If no value is entered, the default will be 1000. Increasing this value may be able to achieve greater client-side throughput for large migrations where normalized RU consumption in the target container is very low (and as long as increasing max items does not also result in rate limiting, or hitting the 4MB response size limit).
-  - **<u>Poll Interval?</u>** - This sets the delay in between polling the change feed for new changes in seconds. You can a value between 1 and 60 seconds (default is 5).
+  - **<u>Poll Interval?</u>** - This sets the delay in between polling the change feed for new changes in seconds. You can add a value between 1 and 60 seconds (default is 5).
 
 - Click “Create/Start”
 
