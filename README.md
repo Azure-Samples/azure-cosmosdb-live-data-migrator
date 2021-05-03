@@ -120,7 +120,7 @@ The Cosmos DB Live Data Migrator provides the following features:
 Click the button below:
 
 <br/>
-<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fazure-cosmosdb-live-data-migrator%2Fmaster%2FMigration.ResourceGroup%2FMigrationServices.json" target="_blank">    <img src="https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true"/></a>
+<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FTheovanKraay%2Fazure-cosmosdb-live-data-migrator%2Fmaster%2FMigration.ResourceGroup%2FMigrationServices.json" target="_blank">    <img src="https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true"/></a>
 
 <br/>
 
@@ -179,7 +179,7 @@ Click the button below:
 
 
 
-![readme_10_app_create.png](images/readme_10_app_create.png)
+![readme_10_app_create-v2.png](images/readme_10_app_create-v2.png)
 
 - When clicking the “Create” button in the header/footer a new migration can be created. 
 
