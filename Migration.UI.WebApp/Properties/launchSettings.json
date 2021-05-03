@@ -3,8 +3,8 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "http://localhost:55062/",
-      "sslPort": 0
+      "applicationUrl": "http://localhost:57392",
+      "sslPort": 44369
     }
   },
   "profiles": {
@@ -12,21 +12,21 @@
       "commandName": "IISExpress",
       "launchBrowser": true,
       "environmentVariables": {
-        "AzureAd:Domain": "microsoft.onmicrosoft.com",
-        "cosmosdbaccount": "metadata-cdb",
-        "cosmosdbleasescollection": "Leases",
-        "keyvaulturi": "https://thvankralivemigrateakv.vault.azure.net/",
-        "defaultdestinationaccount": "tvk-sqlapi",
-        "defaultsourceaccount": "tvk-sqlapi",
+        "cosmosdbaccount": "fabianm-migration16-cdb",
+        "keyvaulturi": "https://fabianmmikvbv4resmt5miqw.vault.azure.net/",
+        "defaultdestinationaccount": "fabianm-migration16-cdb",
+        "defaultsourceaccount": "fabianm-migration16-cdb",
         "cosmosdbdb": "MigrationServiceDB",
-        "allowedUsers": "thvankra@microsoft.com|f46ef4f0-08c9-4d72-bb77-bab55b3f801a",
-        "appinsightsinstrumentationkey": "bt80eho3ezvp5nsnj67t747ywt4snrzm4ixoi16p",
+        "cosmosdbleasescollection": "Leases",
+        "allowedUsers": "fabianmm@microsoft.com|f46ef4f0-08c9-4d72-bb77-bab55b3f801a",
+        "appinsightsinstrumentationkey": "379aec44-bd34-4a8c-a2e8-455db9b49443",
         "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
         "cosmosdbcollection": "MigrationStatus",
-        "AzureAd:TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "AzureAd:ClientId": "17bee405-8a84-4bb9-9892-66fbad39b2b6",
-        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation"
+        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation",
+        "AzureAd:TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+        "AzureAd:ClientId": "95cd656b-9369-411e-9274-a51d12c9c020",
+        "AzureAd:Domain": "microsoft.onmicrosoft.com"
       }
     },
     "Migration.UI.WebApp": {
