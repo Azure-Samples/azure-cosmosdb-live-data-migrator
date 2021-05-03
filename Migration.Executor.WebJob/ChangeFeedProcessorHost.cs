@@ -30,6 +30,7 @@ namespace Migration.Executor.WebJob
         private readonly BlobContainerClient deadletterClient;
         private readonly string processorName;
         private readonly int withMaxItems;
+        private readonly int pollInterval;
 
         private readonly MigrationConfig config;
         private ChangeFeedProcessor changeFeedProcessor;
@@ -41,6 +42,10 @@ namespace Migration.Executor.WebJob
             this.SourcePartitionKeys = config.SourcePartitionKeys;
             this.TargetPartitionKey = config.TargetPartitionKey;
             this.withMaxItems =  config.ChangeFeedMaxItems == null ? 1000 : Int32.Parse(config.ChangeFeedMaxItems);
+            this.pollInterval = config.PollInterval == null ? 5 : Int32.Parse(config.PollInterval);
+
+            Console.WriteLine("this.withMaxItems: " + this.withMaxItems);
+            
 
             this.leaseCollectionClient = KeyVaultHelper.Singleton.CreateCosmosClientFromKeyVault(
                     EnvironmentConfig.Singleton.MigrationMetadataCosmosAccountName,
@@ -179,7 +184,8 @@ namespace Migration.Executor.WebJob
                     starttime = DateTime.UtcNow.Subtract(TimeSpan.FromHours(this.config.DataAgeInHours.Value));
                 }
             }
-
+            TimeSpan interval = this.pollInterval > 60 ? new TimeSpan(0, 0, 5): new TimeSpan(0, 0, this.pollInterval);
+            Console.WriteLine("interval: " + interval);
             this.changeFeedProcessor = this.sourceCollectionClient.GetContainer(this.config.MonitoredDbName, this.config.MonitoredCollectionName)
                 .GetChangeFeedProcessorBuilder<DocumentMetadata>(this.processorName, this.ProcessChangesAsync)
                 .WithInstanceName(hostName)
@@ -190,6 +196,7 @@ namespace Migration.Executor.WebJob
                 .WithLeaseConfiguration(TimeSpan.FromSeconds(30))
                 .WithStartTime(starttime)
                 .WithMaxItems(this.withMaxItems)
+                .WithPollInterval(interval)
                 .Build();
 
             TelemetryHelper.Singleton.LogInfo(
