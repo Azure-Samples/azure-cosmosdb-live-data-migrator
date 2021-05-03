@@ -6,6 +6,12 @@ namespace Migration.Shared.DataContracts
 {
     public class MigrationConfig
     {
+        [JsonProperty("PollInterval")]
+        public string PollInterval { get; set; }
+
+        [JsonProperty("ChangeFeedMaxItems")]
+        public string ChangeFeedMaxItems { get; set; }
+
         [JsonProperty("sourcePartitionKeys")]
         public string SourcePartitionKeys { get; set; }
 

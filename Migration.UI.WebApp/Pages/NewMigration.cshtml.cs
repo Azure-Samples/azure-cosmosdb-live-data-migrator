@@ -18,6 +18,8 @@ namespace Migration.UI.WebApp.Pages
             string destinationDatabase,
             string destinationContainer,
             string destinationPK,
+            string withMaxItems,
+            string pollInterval,
             bool onlyMissingDocuments)
         {
             MigrationConfig newConfig = new MigrationConfig
@@ -31,6 +33,8 @@ namespace Migration.UI.WebApp.Pages
                 DestDbName = destinationDatabase,
                 DestCollectionName = destinationContainer,
                 TargetPartitionKey = destinationPK,
+                ChangeFeedMaxItems = withMaxItems,
+                PollInterval = pollInterval,
                 Completed = false,
                 StartTimeEpochMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 OnlyInsertMissingItems = onlyMissingDocuments,

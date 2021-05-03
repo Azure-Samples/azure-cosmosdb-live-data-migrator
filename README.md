@@ -120,7 +120,7 @@ The Cosmos DB Live Data Migrator provides the following features:
 Click the button below:
 
 <br/>
-<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fazure-cosmosdb-live-data-migrator%2Fmaster%2FMigration.ResourceGroup%2FMigrationServices.json" target="_blank">    <img src="https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true"/></a>
+<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FTheovanKraay%2Fazure-cosmosdb-live-data-migrator%2Fmaster%2FMigration.ResourceGroup%2FMigrationServices.json" target="_blank">    <img src="https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true"/></a>
 
 <br/>
 
@@ -179,16 +179,19 @@ Click the button below:
 
 
 
-![readme_10_app_create.png](images/readme_10_app_create.png)
+![readme_10_app_create-v2.png](images/readme_10_app_create-v2.png)
 
 - When clicking the “Create” button in the header/footer a new migration can be created. 
 
 - The following parameters need to be filled in
 
   - **<u>Account</u>** – the names of the source and destination accounts – just the “short” names – not the full qualified name with *.documents.azure.com. If one of these accounts is not identical with one of the two default accounts provided when deploying the ARM template, the connection string needs to be added in the KeyVault (name of the secret would need to be “<CosmosAccountName>- -CosmosDB-ConnectionString” and the Connection String of the Cosmos Account as value.
-  - **<u>DB</u>** – the names of the source and destination database
-  - **<u>Container</u>** – the names of the source and destination containers
+  - **<u>DB</u>** – the names of the source and destination database.
+  - **<u>Container</u>** – the names of the source and destination containers.
   - **<u>PK</u>** – The partition key definitions of the source and destination container. If your partition key is “/id” in the source container and you would want to use “/pk” in the destination container after migration you would enter “id” and “pk” in these fields.
+  - **<u>Only missing documents?</u>** - In cases where transient errors occur during migration (such as a temporary DC outage), you can check this box in order to migrate only missing documents (i.e. ignore documents that already exist in the target container).
+  - **<u>Change Feed Max Items?</u>** - Sets the maximum number of items to be returned in a Change Feed Request. If no value is entered, the default will be 1000. Increasing this value may be able to achieve greater client-side throughput for large migrations where normalized RU consumption in the target container is very low (and as long as increasing max items does not also result in rate limiting, or hitting the 4MB response size limit).
+  - **<u>Poll Interval?</u>** - This sets the delay in between polling the change feed for new changes in seconds. You can add a value between 1 and 60 seconds (default is 5).
 
 - Click “Create/Start”
 
