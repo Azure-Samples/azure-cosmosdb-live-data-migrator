@@ -51,7 +51,7 @@
     },
     "migrationAppPackage": {
       "type": "string",
-      "defaultValue": "https://github.com/TheovanKraay/cosmos-datasets/blob/master/Migration.UI.WebApp.zip?raw=true",
+      "defaultValue": "https://github.com/TheovanKraay/live-data-migrator-deploy/blob/master/Migration.UI.WebApp.zip?raw=true",
       "minLength": 3,
       "metadata": {
         "description": "The full path tot he zip-package containing the deployment package for the Migration UI App"
@@ -59,7 +59,7 @@
     },
     "exectuorWebJobPackage": {
       "type": "string",
-      "defaultValue": "https://github.com/TheovanKraay/cosmos-datasets/blob/master/Migration.Executor.WebJob.zip?raw=true",
+      "defaultValue": "https://github.com/TheovanKraay/live-data-migrator-deploy/blob/master/Migration.Executor.WebJob.zip?raw=true",
       "minLength": 3,
       "metadata": {
         "description": "The full path to the zip-package containing the deployment package for the Executor WebJob"
@@ -67,7 +67,7 @@
     },
     "monitorWebJobPackage": {
       "type": "string",
-      "defaultValue": "https://github.com/TheovanKraay/cosmos-datasets/blob/master/Migration.Monitor.WebJob.zip?raw=true",
+      "defaultValue": "https://github.com/TheovanKraay/live-data-migrator-deploy/blob/master/Migration.Monitor.WebJob.zip?raw=true",
       "minLength": 3,
       "metadata": {
         "description": "The full path to the zip-package containing the deployment package for the Monitor WebJob"
