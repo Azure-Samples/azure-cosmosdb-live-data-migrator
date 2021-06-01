@@ -10,7 +10,7 @@ namespace Migration.Executor.WebJob
     public static class ItemResponseExtensions
     {
         public static Task<OperationResponse<T>> CaptureOperationResponse<T>(
-            this Task<ItemResponse<T>> task,
+            this Task<ResponseMessage> task,
             T item,
             Boolean ignoreConflicts)
         {
@@ -22,7 +22,7 @@ namespace Migration.Executor.WebJob
                     {
                         Item = item,
                         IsSuccessful = true,
-                        RequestUnitsConsumed = task.Result.RequestCharge
+                        RequestUnitsConsumed = task.Result.Headers.RequestCharge
                     };
                 }
 
@@ -37,7 +37,7 @@ namespace Migration.Executor.WebJob
                         {
                             Item = item,
                             IsSuccessful = true,
-                            RequestUnitsConsumed = task?.Result?.RequestCharge ?? 0
+                            RequestUnitsConsumed = task?.Result?.Headers.RequestCharge ?? 0
                         };
                     }
 
