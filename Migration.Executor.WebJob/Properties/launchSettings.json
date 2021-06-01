@@ -1,0 +1,16 @@
+{
+  "profiles": {
+    "Migration.Executor.WebJob": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "cosmosdbaccount": "fabianm-mig-dev-cdb",
+        "cosmosdbleasescollection": "Leases",
+        "keyvaulturi": "https://fabianmmikv3pyyeib2q7sis.vault.azure.net/",
+        "deadletteraccount": "fabianmblob3pyyeib2q7sis",
+        "cosmosdbdb": "MigrationServiceDB",
+        "appinsightsinstrumentationkey": "fb9a13f3-9398-4447-9bf5-582124a05494",
+        "cosmosdbcollection": "MigrationStatus"
+      }
+    }
+  }
+}

@@ -11,6 +11,7 @@ using System.Xml.Linq;
 using System.Xml.XPath;
 using Azure.Storage.Blobs;
 using Microsoft.Azure.Cosmos;
+using Microsoft.IO;
 using Migration.Shared;
 using Migration.Shared.DataContracts;
 using Newtonsoft.Json;
@@ -22,10 +23,12 @@ namespace Migration.Executor.WebJob
         private static readonly Regex failedDocLineFeedRemoverRegex =
             new Regex(@"\\r\\n?|\\n?|\\\?|\\", RegexOptions.Compiled);
 
+        private static readonly RecyclableMemoryStreamManager memoryManager = new RecyclableMemoryStreamManager();
+
         private readonly CosmosClient destinationCollectionClient;
         private readonly CosmosClient sourceCollectionClient;
         private readonly CosmosClient leaseCollectionClient;
-        private readonly string SourcePartitionKeys;
+        private readonly string SourcePartitionKey;
         private readonly string TargetPartitionKey;
         private readonly BlobContainerClient deadletterClient;
         private readonly string processorName;
@@ -37,7 +40,7 @@ namespace Migration.Executor.WebJob
         public ChangeFeedProcessorHost(MigrationConfig config)
         {
             this.config = config ?? throw new ArgumentNullException(nameof(config));
-            this.SourcePartitionKeys = config.SourcePartitionKeys;
+            this.SourcePartitionKey = config.SourcePartitionKeys;
             this.TargetPartitionKey = config.TargetPartitionKey;
 
             this.leaseCollectionClient = KeyVaultHelper.Singleton.CreateCosmosClientFromKeyVault(
@@ -203,28 +206,45 @@ namespace Migration.Executor.WebJob
         {
             try
             {
-                Boolean isSyntheticKey = this.SourcePartitionKeys.Contains(",");
-                Boolean isNestedAttribute = this.SourcePartitionKeys.Contains("/");
+                Boolean isSyntheticKey = this.SourcePartitionKey.Contains(",");
+                Boolean isNestedAttribute = this.SourcePartitionKey.Contains("/");
                 Container targetContainer = this.destinationCollectionClient.GetContainer(this.config.DestDbName, this.config.DestCollectionName);
                 this.containerToStoreDocuments = targetContainer;
-                DocumentMetadata document;
                 BulkOperations<DocumentMetadata> bulkOperations = new BulkOperations<DocumentMetadata>(docs.Count);
                 foreach (DocumentMetadata doc in docs)
                 {
-                    document = (this.SourcePartitionKeys != null & this.TargetPartitionKey != null) ?
-                        MapPartitionKey(doc, isSyntheticKey, this.TargetPartitionKey, isNestedAttribute, this.SourcePartitionKeys) :
-                        document = doc;
-                    if (this.config.OnlyInsertMissingItems)
+
+                    if (this.SourcePartitionKey != null)
                     {
-                        bulkOperations.Tasks.Add(this.containerToStoreDocuments.CreateItemAsync(
-                            item: document,
-                            cancellationToken: cancellationToken).CaptureOperationResponse(document, ignoreConflicts: true));
+                        doc.PK = this.TargetPartitionKey != null && this.SourcePartitionKey != this.TargetPartitionKey
+                            ? new PartitionKey(isNestedAttribute == true ? GetNestedValue(doc, this.TargetPartitionKey) : doc.GetPropertyValue(this.TargetPartitionKey))
+                            : new PartitionKey(isNestedAttribute == true ? GetNestedValue(doc, this.SourcePartitionKey) : doc.GetPropertyValue(this.SourcePartitionKey));
                     }
-                    else
+
+                    using (RecyclableMemoryStream pooledStream = new RecyclableMemoryStream(memoryManager))
                     {
-                        bulkOperations.Tasks.Add(this.containerToStoreDocuments.UpsertItemAsync(
-                            item: document,
-                            cancellationToken: cancellationToken).CaptureOperationResponse(document, ignoreConflicts: true));
+                        using (StreamWriter writer = new StreamWriter(pooledStream, new UTF8Encoding(false, true), 1024, leaveOpen: true))
+                        {
+                            writer.Write(doc.RawJson);
+                            writer.Flush();
+                            pooledStream.Flush();
+                        }
+
+                        pooledStream.Position = 0;
+                        if (this.config.OnlyInsertMissingItems)
+                        {
+                            bulkOperations.Tasks.Add(this.containerToStoreDocuments.CreateItemStreamAsync(
+                                pooledStream,
+                                doc.PK,
+                                cancellationToken: cancellationToken).CaptureOperationResponse(doc, ignoreConflicts: true));
+                        }
+                        else
+                        {
+                            bulkOperations.Tasks.Add(this.containerToStoreDocuments.UpsertItemStreamAsync(
+                                pooledStream,
+                                doc.PK,
+                                cancellationToken: cancellationToken).CaptureOperationResponse(doc, ignoreConflicts: true));
+                        }
                     }
                 }
                 BulkOperationResponse<DocumentMetadata> bulkOperationResponse = await bulkOperations.ExecuteAsync().ConfigureAwait(false);
@@ -286,63 +306,10 @@ namespace Migration.Executor.WebJob
             }
         }
 
-        public static DocumentMetadata MapPartitionKey(
-            DocumentMetadata doc,
-            Boolean isSyntheticKey,
-            string targetPartitionKey,
-            Boolean isNestedAttribute,
-            string sourcePartitionKeys)
-        {
-            if (isSyntheticKey)
-            {
-                doc = CreateSyntheticKey(doc, sourcePartitionKeys, isNestedAttribute, targetPartitionKey);
-            }
-            else
-            {
-                doc.SetPropertyValue(targetPartitionKey, isNestedAttribute == true ? GetNestedValue(doc, sourcePartitionKeys) : doc.GetPropertyValue<string>(sourcePartitionKeys));
-            }
-
-            return doc;
-        }
-
-        public static DocumentMetadata CreateSyntheticKey(
-            DocumentMetadata doc,
-            string sourcePartitionKeys,
-            Boolean isNestedAttribute,
-            string targetPartitionKey)
-        {
-            StringBuilder syntheticKey = new StringBuilder();
-            string[] sourceAttributeArray = sourcePartitionKeys.Split(',');
-            int arraylength = sourceAttributeArray.Length;
-            int count = 1;
-            foreach (string rawattribute in sourceAttributeArray)
-            {
-                string attribute = rawattribute.Trim();
-                if (count == arraylength)
-                {
-                    string val = isNestedAttribute == true ?
-                        GetNestedValue(doc, attribute) :
-                        doc.GetPropertyValue<string>(attribute);
-                    syntheticKey.Append(val);
-                }
-                else
-                {
-                    string val = isNestedAttribute == true ?
-                        GetNestedValue(doc, attribute) + "-" :
-                        doc.GetPropertyValue<string>(attribute) + "-";
-                    syntheticKey.Append(val);
-                }
-                count++;
-            }
-            doc.SetPropertyValue(targetPartitionKey, syntheticKey.ToString());
-
-            return doc;
-        }
-
         public static string GetNestedValue(DocumentMetadata doc, string path)
         {
             System.Xml.XmlDictionaryReader jsonReader = JsonReaderWriterFactory.CreateJsonReader(
-                Encoding.UTF8.GetBytes(doc.ToString()),
+                Encoding.UTF8.GetBytes(doc.RawJson),
                 new System.Xml.XmlDictionaryReaderQuotas());
             XElement root = XElement.Load(jsonReader);
             string value = root.XPathSelectElement("//" + path).Value;

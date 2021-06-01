@@ -89,6 +89,8 @@ namespace Migration.Shared
                 options.ApplicationName = userAgentPrefix;
             }
 
+            options.Serializer = new OpaqueChangeFeedSerializer();
+
             string connectionString = KeyVaultHelper.Singleton.GetSecret(accountName + CosmosConnectionStringSecretNameSuffix);
 
             return new CosmosClient(connectionString, options);
