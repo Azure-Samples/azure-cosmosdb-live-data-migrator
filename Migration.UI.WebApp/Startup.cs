@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.UI;
 using Migration.Shared;
 
 namespace Migration.UI.WebApp
@@ -23,8 +25,8 @@ namespace Migration.UI.WebApp
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddAuthentication(AzureADDefaults.AuthenticationScheme)
-                .AddAzureAD(options => this.Configuration.Bind("AzureAd", options));
+            services
+                .AddMicrosoftIdentityWebAppAuthentication(this.Configuration, "AzureAd");
 
             services.AddRazorPages().AddMvcOptions(options =>
             {
@@ -35,7 +37,7 @@ namespace Migration.UI.WebApp
                         EnvironmentConfig.Singleton.AllowedUsers))
                     .Build();
                 options.Filters.Add(new AuthorizeFilter(policy));
-            });
+            }).AddMicrosoftIdentityUI();
 
             services.AddSingleton<IAuthorizationHandler, MigrationAppUserHandler>();
 
