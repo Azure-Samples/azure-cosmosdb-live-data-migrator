@@ -211,6 +211,14 @@ namespace Migration.Executor.WebJob
                 BulkOperations<DocumentMetadata> bulkOperations = new BulkOperations<DocumentMetadata>(docs.Count);
                 foreach (DocumentMetadata doc in docs)
                 {
+                    if (!String.IsNullOrWhiteSpace(this.config.SourcePartitionKeyValueFilter) &&
+                        !this.config.SourcePartitionKeyValueFilter.Equals(
+                            doc.GetPropertyValue<String>(this.config.SourcePartitionKeys),
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
                     document = (this.SourcePartitionKeys != null & this.TargetPartitionKey != null) ?
                         MapPartitionKey(doc, isSyntheticKey, this.TargetPartitionKey, isNestedAttribute, this.SourcePartitionKeys) :
                         document = doc;
@@ -227,13 +235,17 @@ namespace Migration.Executor.WebJob
                             cancellationToken: cancellationToken).CaptureOperationResponse(document, ignoreConflicts: true));
                     }
                 }
-                BulkOperationResponse<DocumentMetadata> bulkOperationResponse = await bulkOperations.ExecuteAsync().ConfigureAwait(false);
-                if (bulkOperationResponse.Failures.Count > 0 && this.deadletterClient != null)
+
+                if (bulkOperations.Tasks.Count > 0)
                 {
-                    await this.WriteFailedDocsToBlob("FailedImportDocs", this.deadletterClient, bulkOperationResponse)
-                        .ConfigureAwait(false);
+                    BulkOperationResponse<DocumentMetadata> bulkOperationResponse = await bulkOperations.ExecuteAsync().ConfigureAwait(false);
+                    if (bulkOperationResponse.Failures.Count > 0 && this.deadletterClient != null)
+                    {
+                        await this.WriteFailedDocsToBlob("FailedImportDocs", this.deadletterClient, bulkOperationResponse)
+                            .ConfigureAwait(false);
+                    }
+                    TelemetryHelper.Singleton.LogMetrics(bulkOperationResponse);
                 }
-                TelemetryHelper.Singleton.LogMetrics(bulkOperationResponse);
             }
             catch (Exception error)
             {

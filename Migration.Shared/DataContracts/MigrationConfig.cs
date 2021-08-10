@@ -9,6 +9,9 @@ namespace Migration.Shared.DataContracts
         [JsonProperty("sourcePartitionKeys")]
         public string SourcePartitionKeys { get; set; }
 
+        [JsonProperty("sourcePartitionKeyValueFilter")]
+        public string SourcePartitionKeyValueFilter { get; set; }
+
         [JsonProperty("targetPartitionKey")]
         public string TargetPartitionKey { get; set; }
 

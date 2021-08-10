@@ -146,25 +146,48 @@ namespace Migration.Monitor.WebJob
             }
         }
 
-        private static async Task<long> GetDocumentCountAsync(Container container)
+        private static Task<long> GetSourceDocumentCountAsync(Container container, MigrationConfig migrationConfig)
+        {
+            return GetDocumentCountAsync(
+                container,
+                migrationConfig,
+                !String.IsNullOrWhiteSpace(migrationConfig.SourcePartitionKeyValueFilter));
+        }
+
+        private static Task<long> GetTargetDocumentCountAsync(
+            Container container,
+            MigrationConfig migrationConfig)
+        {
+            return GetDocumentCountAsync(
+                container,
+                migrationConfig,
+                !String.IsNullOrWhiteSpace(migrationConfig.SourcePartitionKeyValueFilter) &&
+                String.Equals(migrationConfig.SourcePartitionKeys, migrationConfig.TargetPartitionKey));
+        }
+
+        private static async Task<long> GetDocumentCountAsync(
+            Container container,
+            MigrationConfig migrationConfig,
+            bool filterIsPartitionKey)
         {
             if (container == null) { throw new ArgumentNullException(nameof(container)); }
+            if (migrationConfig == null) { throw new ArgumentNullException(nameof(migrationConfig)); }
 
             TelemetryHelper.Singleton.LogInfo(
-                            "Retrieving document count of container '{0}/{1}'",
+                            "Retrieving document count of container '{0}/{1}' with filter '{2}'",
                             container.Database.Id,
-                            container.Id);
+                            container.Id,
+                            migrationConfig.SourcePartitionKeyValueFilter);
 
             try
             {
-                ContainerRequestOptions requestOptions = new ContainerRequestOptions { PopulateQuotaInfo = true };
-                ContainerResponse result = await container.ReadContainerAsync(requestOptions);
-                string usage = result.Headers["x-ms-resource-usage"];
-                string[] quotas = usage.Split(";");
-                const string DocumentsCountPrefix = "documentsCount=";
-
-                long count = long.Parse(
-                    quotas.Single(q => q.StartsWith(DocumentsCountPrefix))[DocumentsCountPrefix.Length..]);
+                long count = String.IsNullOrWhiteSpace(migrationConfig.SourcePartitionKeyValueFilter)
+                    ? await GetDocumentCountEntireContainerAsync(container).ConfigureAwait(false)
+                    : await GetDocumentCountWithFilterAsync(
+                        container,
+                        migrationConfig.SourcePartitionKeys,
+                        migrationConfig.SourcePartitionKeyValueFilter,
+                        filterIsPartitionKey).ConfigureAwait(false);
 
                 TelemetryHelper.Singleton.LogInfo(
                     "Retrieved document count of container '{0}/{1}' - {2}",
@@ -184,6 +207,60 @@ namespace Migration.Monitor.WebJob
 
                 throw;
             }
+        }
+
+        private static async Task<long> GetDocumentCountEntireContainerAsync(Container container)
+        {
+            if (container == null) { throw new ArgumentNullException(nameof(container)); }
+
+            ContainerRequestOptions requestOptions = new ContainerRequestOptions { PopulateQuotaInfo = true };
+            ContainerResponse result = await container.ReadContainerAsync(requestOptions);
+            string usage = result.Headers["x-ms-resource-usage"];
+            string[] quotas = usage.Split(";");
+            const string DocumentsCountPrefix = "documentsCount=";
+
+            return long.Parse(
+                quotas.Single(q => q.StartsWith(DocumentsCountPrefix))[DocumentsCountPrefix.Length..]);
+        }
+
+        private static async Task<long> GetDocumentCountWithFilterAsync(
+            Container container,
+            String sourcePartitionKeyName,
+            String sourcePartitionKeyValue,
+            bool filterIsPartitionKey)
+        {
+            if (container == null) { throw new ArgumentNullException(nameof(container)); }
+            if (String.IsNullOrWhiteSpace(sourcePartitionKeyName)) { throw new ArgumentNullException(nameof(sourcePartitionKeyName)); }
+            if (sourcePartitionKeyValue == null) { throw new ArgumentNullException(nameof(sourcePartitionKeyValue)); }
+
+            QueryDefinition queryDef = new QueryDefinition("SELECT VALUE COUNT(1) FROM c WHERE c.{0} == @pkValue")
+                .WithParameter("@pkValue", sourcePartitionKeyValue);
+
+            QueryRequestOptions requestOptions = new QueryRequestOptions
+            {
+                ConsistencyLevel = ConsistencyLevel.Eventual
+            };
+
+            if (filterIsPartitionKey)
+            {
+                requestOptions.PartitionKey = new PartitionKey(sourcePartitionKeyValue);
+            }
+
+            long recordCount = 0;
+            FeedIterator<long> queryIterator = container.GetItemQueryIterator<long>(queryDef, null, requestOptions);
+            while (queryIterator.HasMoreResults)
+            {
+                FeedResponse<long> pagedResponse = await queryIterator.ReadNextAsync();
+                if (pagedResponse.Resource != null)
+                {
+                    foreach(long current in pagedResponse.Resource)
+                    {
+                        recordCount += current;
+                    }
+                }
+            }
+
+            return recordCount;
         }
 
         private static async Task TrackMigrationProgressAsync(
@@ -210,8 +287,8 @@ namespace Migration.Monitor.WebJob
 
                 DateTimeOffset now = DateTimeOffset.UtcNow;
 
-                long sourceCollectionCount = await GetDocumentCountAsync(sourceContainer).ConfigureAwait(false);
-                long currentDestinationCollectionCount = await GetDocumentCountAsync(destinationContainer)
+                long sourceCollectionCount = await GetSourceDocumentCountAsync(sourceContainer, migrationConfig).ConfigureAwait(false);
+                long currentDestinationCollectionCount = await GetTargetDocumentCountAsync(destinationContainer, migrationConfig)
                     .ConfigureAwait(false);
                 double currentPercentage = sourceCollectionCount == 0 ?
                     100 :
