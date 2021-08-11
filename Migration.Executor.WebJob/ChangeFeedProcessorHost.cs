@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Microsoft.Azure.Cosmos;
 using Migration.Shared;
 using Migration.Shared.DataContracts;
@@ -271,9 +272,9 @@ namespace Migration.Executor.WebJob
                 BlobClient blobClient = containerClient.GetBlobClient(failureType + Guid.NewGuid().ToString() + ".csv");
 
                 failures = JsonConvert.SerializeObject(String.Join(",", bulkOperationResponse.DocFailures));
-                failedDocs = JsonConvert.SerializeObject(String.Join(",", bulkOperationResponse.FailedDocs));
+                failedDocs = JsonConvert.SerializeObject(String.Join(EnvironmentConfig.FailedDocSeperator, bulkOperationResponse.FailedDocs));
                 failedDocs = failedDocLineFeedRemoverRegex.Replace(failedDocs, String.Empty);
-                byteArray = Encoding.ASCII.GetBytes(failures + "|" + bulkOperationResponse.Failures.Count + "|" + failedDocs);
+                byteArray = Encoding.UTF8.GetBytes(failures + "|" + bulkOperationResponse.Failures.Count + "|" + failedDocs);
 
                 using (MemoryStream ms = new MemoryStream(byteArray))
                 {

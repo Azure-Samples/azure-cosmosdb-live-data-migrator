@@ -1,10 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure;
 using Azure.Identity;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.Cosmos;
 using Migration.Shared;
@@ -27,6 +33,12 @@ namespace Migration.Monitor.WebJob
 
         private static readonly Dictionary<string, CosmosClient> destinationClients =
             new Dictionary<string, CosmosClient>(StringComparer.OrdinalIgnoreCase);
+
+        private static readonly Dictionary<string, ChangeFeedEstimator> estimators =
+            new Dictionary<string, ChangeFeedEstimator>(StringComparer.OrdinalIgnoreCase);
+
+        private static readonly Dictionary<string, BlobContainerClient> deadletterClients =
+            new Dictionary<string, BlobContainerClient>(StringComparer.OrdinalIgnoreCase);
 
 #pragma warning disable IDE0060 // Remove unused parameter
 
@@ -88,6 +100,12 @@ namespace Migration.Monitor.WebJob
                         new ContainerProperties(EnvironmentConfig.Singleton.MigrationMetadataContainerName, "/id"))
                     .ConfigureAwait(false);
 
+                Container leaseContainer = await db
+                    .CreateContainerIfNotExistsAsync(
+                        new ContainerProperties(EnvironmentConfig.Singleton.MigrationLeasesContainerName, "/id"))
+                    .ConfigureAwait(false);
+
+
                 while (true)
                 {
                     try
@@ -124,7 +142,27 @@ namespace Migration.Monitor.WebJob
                                     configDocs[i].DestCollectionName,
                                     configDocs[i].Id);
 
-                                await TrackMigrationProgressAsync(container, configDocs[i])
+                                if (!estimators.TryGetValue(configDocs[i].ProcessorName, out ChangeFeedEstimator estimator))
+                                {
+                                    estimator = container.GetChangeFeedEstimator(
+                                        configDocs[i].ProcessorName,
+                                        leaseContainer);
+
+                                    estimators.TryAdd(configDocs[i].ProcessorName, estimator);
+                                }
+
+                                if (!deadletterClients.TryGetValue(
+                                    configDocs[i].ProcessorName,
+                                    out BlobContainerClient deadletterClient))
+                                {
+                                    deadletterClient = KeyVaultHelper.Singleton.GetBlobContainerClientFromKeyVault(
+                                        EnvironmentConfig.Singleton.DeadLetterAccountName,
+                                        configDocs[i].Id?.ToLowerInvariant().Replace("-", String.Empty));
+
+                                    deadletterClients.TryAdd(configDocs[i].ProcessorName, deadletterClient);
+                                }
+
+                                await TrackMigrationProgressAsync(container, estimator, deadletterClient, configDocs[i])
                                     .ConfigureAwait(false);
 
                                 TelemetryHelper.Singleton.LogInfo(
@@ -143,6 +181,93 @@ namespace Migration.Monitor.WebJob
 
                     await Task.Delay(SleepTime).ConfigureAwait(false);
                 }
+            }
+        }
+
+        private static async Task<long> GetPoisonMessageCountAsync(BlobContainerClient deadLetterClient)
+        {
+            try
+            {
+                AsyncPageable<BlobItem> blobsPagable = deadLetterClient.GetBlobsAsync(BlobTraits.All, BlobStates.None);
+                int poisonMessageCount = 0;
+                await foreach (BlobItem blob in blobsPagable.ConfigureAwait(false))
+                {
+                    if (blob.Metadata.TryGetValue(
+                        EnvironmentConfig.DeadLetterMetaDataSuccessfulRetryStatusKey,
+                        out string successfulRetryStatusRaw) &&
+                        long.TryParse(successfulRetryStatusRaw, out long successfulRetryStatus) &&
+                        successfulRetryStatus > 0)
+                    {
+                        // all poison messages in this blob have been successfully retried
+                        // safe to ignore
+                        continue;
+                    }
+
+                    BlobClient blobClient = deadLetterClient.GetBlobClient(blob.Name);
+                    MemoryStream downloadStream = new MemoryStream();
+                    await blobClient.DownloadToAsync(downloadStream).ConfigureAwait(false);
+                    string blobContent = Encoding.UTF8.GetString(downloadStream.ToArray());
+
+                    int failedDocCount = Regex.Matches(blobContent, EnvironmentConfig.FailedDocSeperator).Count;
+                    if (!blob.Metadata.TryGetValue(
+                        EnvironmentConfig.DeadLetterMetaSuccessfulRetryCountKey,
+                        out string successfulRetryCountRaw) ||
+                        int.TryParse(successfulRetryCountRaw, out int successfulRetryCount))
+                    {
+                        successfulRetryCount = 0;
+                    }
+
+                    if (successfulRetryCount > failedDocCount)
+                    {
+                        blob.Metadata[EnvironmentConfig.DeadLetterMetaDataSuccessfulRetryStatusKey] = "1";
+                        Azure.Response<BlobInfo> updateResponse = await blobClient.SetMetadataAsync(
+                            blob.Metadata,
+                            new BlobRequestConditions
+                            {
+                                IfMatch = blob.Properties.ETag
+                            }).ConfigureAwait(false);
+
+                        TelemetryHelper.Singleton.LogInfo(
+                            "Marked SuccessfulRetryStatus for posion message blob '{0}'",
+                            blob.Name);
+                    }
+
+                    Interlocked.Add(ref poisonMessageCount, Math.Max(0, failedDocCount - successfulRetryCount));
+                }
+
+                return poisonMessageCount;
+            }
+            catch (Exception error)
+            {
+                TelemetryHelper.Singleton.LogWarning(
+                    "Failed to get number of poison messages. Retrying on next iteration... Exception: {0}",
+                    error);
+
+                return -1;
+            }
+        }
+
+        private static async Task<long> GetUnprocessedTransactionCountAsync(ChangeFeedEstimator estimator)
+        {
+            try
+            {
+                FeedIterator<ChangeFeedProcessorState> iterator = estimator.GetCurrentStateIterator();
+                List<ChangeFeedProcessorState> states = new List<ChangeFeedProcessorState>();
+                while (iterator.HasMoreResults)
+                {
+                    FeedResponse<ChangeFeedProcessorState> response = await iterator.ReadNextAsync().ConfigureAwait(false);
+                    states.AddRange(response.Resource);
+                }
+
+                return states.Sum(s => s.EstimatedLag);
+            }
+            catch (Exception error)
+            {
+                TelemetryHelper.Singleton.LogWarning(
+                    "Failed to get estimated number of unprocessed documents. Retrying on next iteration... Exception: {0}",
+                    error);
+
+                return -1;
             }
         }
 
@@ -265,9 +390,12 @@ namespace Migration.Monitor.WebJob
 
         private static async Task TrackMigrationProgressAsync(
             Container migrationContainer,
+            ChangeFeedEstimator estimator,
+            BlobContainerClient deadLetterClient,
             MigrationConfig migrationConfig)
         {
             if (migrationContainer == null) { throw new ArgumentNullException(nameof(migrationContainer)); }
+            if (estimator == null) { throw new ArgumentNullException(nameof(estimator)); }
             if (migrationConfig == null) { throw new ArgumentNullException(nameof(migrationConfig)); }
 
             CosmosClient sourceClient = GetOrCreateSourceCosmosClient(migrationConfig.MonitoredAccount);
@@ -287,9 +415,18 @@ namespace Migration.Monitor.WebJob
 
                 DateTimeOffset now = DateTimeOffset.UtcNow;
 
-                long sourceCollectionCount = await GetSourceDocumentCountAsync(sourceContainer, migrationConfig).ConfigureAwait(false);
-                long currentDestinationCollectionCount = await GetTargetDocumentCountAsync(destinationContainer, migrationConfig)
-                    .ConfigureAwait(false);
+                Task<long>[] tasks = new Task<long>[4];
+                tasks[0] = GetPoisonMessageCountAsync(deadLetterClient);
+                tasks[1] = GetUnprocessedTransactionCountAsync(estimator);
+                tasks[2] = GetSourceDocumentCountAsync(sourceContainer, migrationConfig);
+                tasks[3] = GetTargetDocumentCountAsync(destinationContainer, migrationConfig);
+
+                long[] results = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+                long poisonMessageCount = results[0];
+                long unprocessedTransactionCount = results[1];
+                long sourceCollectionCount = results[2];
+                long currentDestinationCollectionCount = results[3];
                 double currentPercentage = sourceCollectionCount == 0 ?
                     100 :
                     currentDestinationCollectionCount * 100.0 / sourceCollectionCount;
@@ -319,6 +456,8 @@ namespace Migration.Monitor.WebJob
                 migrationConfigSnapshot.PercentageCompleted = currentPercentage;
                 migrationConfigSnapshot.StatisticsLastUpdatedEpochMs = nowEpochMs;
                 migrationConfigSnapshot.MigratedDocumentCount = currentDestinationCollectionCount;
+                migrationConfigSnapshot.UnprocessedTransactionCountSnapshot = unprocessedTransactionCount;
+                migrationConfigSnapshot.PoisonMessageCountSnapshot = poisonMessageCount;
                 if (insertedCount > 0)
                 {
                     migrationConfigSnapshot.StatisticsLastMigrationActivityRecordedEpochMs = nowEpochMs;

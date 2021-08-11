@@ -66,6 +66,12 @@ namespace Migration.Shared.DataContracts
         [JsonProperty("statistics.destinationCount")]
         public long DestinationCountSnapshot { get; set; }
 
+        [JsonProperty("statistics.poisonMessageCount")]
+        public long PoisonMessageCountSnapshot { get; set; }
+
+        [JsonProperty("statistics.unprocessedTransactionCount")]
+        public long UnprocessedTransactionCountSnapshot { get; set; }
+
         [JsonProperty("statistics.percentageCompleted")]
         public double PercentageCompleted { get; set; }
 
