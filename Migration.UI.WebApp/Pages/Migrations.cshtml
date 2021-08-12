@@ -15,8 +15,10 @@
             <td class="pl-2 font-weight-bold text-sm-right">Migrated #</td>
             <td class="pl-2 font-weight-bold text-sm-right">Completed (%)</td>
             <td class="pl-2 font-weight-bold">ETA</td>
+            <td class="pl-2 font-weight-bold">Unprocessed txs #</td>
             <td class="pl-2 font-weight-bold text-sm-right">Current rate (items/s)</td>
             <td class="pl-2 font-weight-bold text-sm-right">Avg. rate (items/s)</td>
+            <td class="pl-2 font-weight-bold">Poison msgs#</td>
             <td class="pl-2 font-weight-bold">Statistics updated</td>
             <td />
         </tr>
@@ -25,26 +27,31 @@
         @{
             @foreach (var record in Model.records)
             {
-                <tr>
-                    <td class="pl-2">@Html.DisplayFor(modelItem => record.Id)</td>
-                    <td class="pl-2">@Html.DisplayFor(modelItem => record.StartTime)</td>
-                    <td class="pl-2">@Html.DisplayFor(modelItem => record.SourceIdentifier)</td>
-                    <td class="pl-2">@Html.DisplayFor(modelItem => record.DestinationIdentifier)</td>
-                    <td class="pl-2 text-sm-right">@Html.DisplayFor(modelItem => record.SourceCountSnapshotPretty)</td>
-                    <td class="pl-2 text-sm-right">@Html.DisplayFor(modelItem => record.DestinationCountSnapshotPretty)</td>
-                    <td class="pl-2 text-sm-right">@Html.DisplayFor(modelItem => record.PercentageCompletedPretty)</td>
-                    <td class="pl-2 ">@Html.DisplayFor(modelItem => record.EstimatedTimeToComplete)</td>
-                    <td class="pl-2 text-sm-right">@Html.DisplayFor(modelItem => record.CurrentRatePretty)</td>
-                    <td class="pl-2 text-sm-right">@Html.DisplayFor(modelItem => record.AvgRatePretty)</td>
-                    <td class="pl-2 ">@Html.DisplayFor(modelItem => record.StatisticsLastUpdated)</td>
-                    <td class="pl-2 text-sm-right">
-                        @using (Html.BeginForm(FormMethod.Post))
-                        {
-                            @Html.Hidden("id", @record.Id)
-                            <input type="submit" value="Complete" name="Complete" asp-page-handler="Complete" />
-                        }
-                    </td>
-                </tr>
+        <tr>
+            <td class="pl-2">@Html.DisplayFor(modelItem => record.Id)</td>
+            <td class="pl-2">@Html.DisplayFor(modelItem => record.StartTime)</td>
+            <td class="pl-2">@Html.DisplayFor(modelItem => record.SourceIdentifier)</td>
+            <td class="pl-2">@Html.DisplayFor(modelItem => record.DestinationIdentifier)</td>
+            <td class="pl-2 text-sm-right">@Html.DisplayFor(modelItem => record.SourceCountSnapshotPretty)</td>
+            <td class="pl-2 text-sm-right">@Html.DisplayFor(modelItem => record.DestinationCountSnapshotPretty)</td>
+            <td class="pl-2 text-sm-right">@Html.DisplayFor(modelItem => record.PercentageCompletedPretty)</td>
+            <td class="pl-2 ">@Html.DisplayFor(modelItem => record.EstimatedTimeToComplete)</td>
+            <td class="pl-2 ">@Html.DisplayFor(modelItem => record.UnprocessedTransactionCountSnapshot)</td>
+            <td class="pl-2 text-sm-right">@Html.DisplayFor(modelItem => record.CurrentRatePretty)</td>
+            <td class="pl-2 text-sm-right">@Html.DisplayFor(modelItem => record.AvgRatePretty)</td>
+            <td class="pl-2 ">@Html.DisplayFor(modelItem => record.PoisonMessageCountSnapshot)</td>
+            <td class="pl-2 ">@Html.DisplayFor(modelItem => record.StatisticsLastUpdated)</td>
+            <td class="pl-2 text-sm-right">
+                @using (Html.BeginForm(FormMethod.Post))
+                {
+                    @Html.Hidden("id", @record.Id)
+                    <input type="submit" value="Complete" name="Complete" asp-page-handler="Complete" />
+
+                    @Html.Hidden("id", @record.Id)
+                    <input type="submit" value="RetryPoisonMsgs" name="RetryPoisonMsgs" asp-page-handler="RetryPoisonMsgs" />
+                }
+            </td>
+        </tr>
             }
         }
     </tbody>

@@ -179,5 +179,53 @@ namespace Migration.UI.WebApp
                 throw;
             }
         }
+
+        public async Task<MigrationConfig> RetryPosionMsgsAsync(string id)
+        {
+            try
+            {
+                while (true)
+                {
+                    MigrationConfig config = await this.GetMigrationAsync(id).ConfigureAwait(false);
+
+                    if (config.Completed)
+                    {
+                        return config;
+                    }
+
+                    config.PoisonMessageRetryRequestedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+                    try
+                    {
+                        return await this.container
+                            .ReplaceItemAsync<MigrationConfig>(
+                                config,
+                                config.Id,
+                                new PartitionKey(config.Id),
+                                new ItemRequestOptions
+                                {
+                                    IfMatchEtag = config.ETag,
+                                })
+                            .ConfigureAwait(false);
+                    }
+                    catch (CosmosException error)
+                    {
+                        if (error.StatusCode == HttpStatusCode.PreconditionFailed)
+                        {
+                            continue;
+                        }
+                    }
+                }
+            }
+            catch (Exception error)
+            {
+                TelemetryHelper.Singleton.LogError(
+                    "MigrationConfigDal.RetryPosionMsgsAsync({0}) failed: {1}",
+                    id,
+                    error);
+
+                throw;
+            }
+        }
     }
 }

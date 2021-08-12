@@ -108,7 +108,26 @@ namespace Migration.Shared.DataContracts
 
         // TODO - consider using cleaner Page-View-Model instead
         [JsonIgnore]
-        public string SourceIdentifier => string.Concat(this.MonitoredAccount, "/", this.MonitoredDbName, "/", this.MonitoredCollectionName);
+        public string SourceIdentifier {
+            get {
+                if (String.IsNullOrWhiteSpace(this.SourcePartitionKeyValueFilter))
+                {
+                    return string.Concat(this.MonitoredAccount, "/", this.MonitoredDbName, "/", this.MonitoredCollectionName);
+                }
+
+                return string.Concat(
+                    this.MonitoredAccount,
+                    "/",
+                    this.MonitoredDbName,
+                    "/",
+                    this.MonitoredCollectionName,
+                    "[",
+                    this.SourcePartitionKeys,
+                    "=='",
+                    this.SourcePartitionKeyValueFilter,
+                    "'");
+            }
+        }
 
         [JsonIgnore]
         public string DestinationIdentifier => string.Concat(this.DestAccount, "/", this.DestDbName, "/", this.DestCollectionName);

@@ -32,5 +32,15 @@ namespace Migration.UI.WebApp.Pages
 
             return this.RedirectToPage("/Migrations", null);
         }
+
+        public async Task<IActionResult> OnPostRetryPoisonMsgsAsync(
+            string id)
+        {
+            await MigrationConfigDal.Singleton
+                .RetryPosionMsgsAsync(id)
+                .ConfigureAwait(false);
+
+            return this.RedirectToPage("/Migrations", null);
+        }
     }
 }
