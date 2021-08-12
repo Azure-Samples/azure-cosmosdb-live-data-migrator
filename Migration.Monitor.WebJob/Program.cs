@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -28,17 +29,17 @@ namespace Migration.Monitor.WebJob
         private const int SleepTime = 10000;
         private const int MaxConcurrentMonitoringJobs = 5;
 
-        private static readonly Dictionary<string, CosmosClient> sourceClients =
-            new Dictionary<string, CosmosClient>(StringComparer.OrdinalIgnoreCase);
+        private static readonly ConcurrentDictionary<string, CosmosClient> sourceClients =
+            new ConcurrentDictionary<string, CosmosClient>(StringComparer.OrdinalIgnoreCase);
 
-        private static readonly Dictionary<string, CosmosClient> destinationClients =
-            new Dictionary<string, CosmosClient>(StringComparer.OrdinalIgnoreCase);
+        private static readonly ConcurrentDictionary<string, CosmosClient> destinationClients =
+            new ConcurrentDictionary<string, CosmosClient>(StringComparer.OrdinalIgnoreCase);
 
-        private static readonly Dictionary<string, ChangeFeedEstimator> estimators =
-            new Dictionary<string, ChangeFeedEstimator>(StringComparer.OrdinalIgnoreCase);
+        private static readonly ConcurrentDictionary<string, ChangeFeedEstimator> estimators =
+            new ConcurrentDictionary<string, ChangeFeedEstimator>(StringComparer.OrdinalIgnoreCase);
 
-        private static readonly Dictionary<string, BlobContainerClient> deadletterClients =
-            new Dictionary<string, BlobContainerClient>(StringComparer.OrdinalIgnoreCase);
+        private static readonly ConcurrentDictionary<string, BlobContainerClient> deadletterClients =
+            new ConcurrentDictionary<string, BlobContainerClient>(StringComparer.OrdinalIgnoreCase);
 
 #pragma warning disable IDE0060 // Remove unused parameter
 
@@ -217,7 +218,7 @@ namespace Migration.Monitor.WebJob
                         successfulRetryCount = 0;
                     }
 
-                    if (successfulRetryCount > failedDocCount)
+                    if (successfulRetryCount >= failedDocCount)
                     {
                         blob.Metadata[EnvironmentConfig.DeadLetterMetaDataSuccessfulRetryStatusKey] = "1";
                         Azure.Response<BlobInfo> updateResponse = await blobClient.SetMetadataAsync(
@@ -520,7 +521,7 @@ namespace Migration.Monitor.WebJob
         }
 
         private static CosmosClient GetOrCreateCosmosClient(
-            Dictionary<string, CosmosClient> cache,
+            ConcurrentDictionary<string, CosmosClient> cache,
             string userAgentPrefix,
             string accountName)
         {
@@ -539,7 +540,7 @@ namespace Migration.Monitor.WebJob
                     userAgentPrefix,
                     useBulk: false,
                     retryOn429Forever: true);
-                cache.Add(accountName, client);
+                cache.TryAdd(accountName, client);
 
                 return client;
             }

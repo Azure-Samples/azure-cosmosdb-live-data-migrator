@@ -48,6 +48,15 @@ namespace Migration.Shared.DataContracts
         [JsonProperty("startTime")]
         public long StartTimeEpochMs { get; set; }
 
+        [JsonProperty("poisonMessageRetryRequestedAt")]
+        public long PoisonMessageRetryRequestedAt { get; set; }
+
+        [JsonProperty("lastPoisonMessageRetryStartedAt")]
+        public long LastPoisonMessageRetryStartedAt { get; set; }
+
+        [JsonProperty("lastPoisonMessageRetryId")]
+        public string LastPoisonMessageRetryId { get; set; }
+
         [JsonProperty("statistics.count")]
         public long MigratedDocumentCount { get; set; }
 

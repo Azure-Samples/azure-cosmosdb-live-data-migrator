@@ -195,6 +195,16 @@ namespace Migration.Shared.DataContracts
             return null;
         }
 
+        public DocumentIdentifier ToDocumentIdentity(MigrationConfig config)
+        {
+            if (config == null) { throw new ArgumentNullException(nameof(config)); }
+
+            return new DocumentIdentifier(
+                this.GetPropertyValue<string>(config.SourcePartitionKeys),
+                this.Id,
+                this.ETag);
+        }
+
         //Property Getter/Setter for Expandable User property.
         private object GetProperty(
             string propertyName, Type returnType)

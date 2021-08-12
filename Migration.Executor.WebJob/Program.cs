@@ -1,10 +1,19 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
+using Azure;
 using Azure.Identity;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.Cosmos;
 using Migration.Shared;
@@ -19,10 +28,15 @@ namespace Migration.Executor.WebJob
         public const string SourceClientUserAgentPrefix = "MigrationExecutor.Source";
         public const string DestinationClientUserAgentPrefix = "MigrationExecutor.Destination";
 
-        private const int SleepTime = 5000;
+        private const int SleepTimeInMs = 5000;
 
-        private readonly Dictionary<string, ChangeFeedProcessorHost> changeFeedProcessorHosts =
-            new Dictionary<string, ChangeFeedProcessorHost>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, ChangeFeedProcessorHost> changeFeedProcessorHosts =
+            new ConcurrentDictionary<string, ChangeFeedProcessorHost>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly SemaphoreSlim retryConcurrencySemaphore = new SemaphoreSlim(5);
+
+        private static readonly ConcurrentDictionary<string, BlobContainerClient> deadletterClients =
+            new ConcurrentDictionary<string, BlobContainerClient>(StringComparer.OrdinalIgnoreCase);
 
 #pragma warning disable IDE0060 // Remove unused parameter
 
@@ -64,6 +78,123 @@ namespace Migration.Executor.WebJob
             }
         }
 
+        private async Task RetryPoisonMessages(MigrationConfig config)
+        {
+            if (config == null) { throw new ArgumentNullException(nameof(config)); }
+
+            await this.retryConcurrencySemaphore.WaitAsync().ConfigureAwait(false);
+
+            try
+            {
+                if (!deadletterClients.TryGetValue(
+                           config.ProcessorName,
+                           out BlobContainerClient deadLetterClient))
+                {
+                    deadLetterClient = KeyVaultHelper.Singleton.GetBlobContainerClientFromKeyVault(
+                        EnvironmentConfig.Singleton.DeadLetterAccountName,
+                        config.Id?.ToLowerInvariant().Replace("-", String.Empty));
+
+                    deadletterClients.TryAdd(config.ProcessorName, deadLetterClient);
+                }
+
+                AsyncPageable<BlobItem> blobsPagable = deadLetterClient.GetBlobsAsync(BlobTraits.All, BlobStates.None);
+                int poisonMessageCount = 0;
+                await foreach (BlobItem blob in blobsPagable.ConfigureAwait(false))
+                {
+                    if (blob.Metadata.TryGetValue(
+                        EnvironmentConfig.DeadLetterMetaDataSuccessfulRetryStatusKey,
+                        out string successfulRetryStatusRaw) &&
+                        long.TryParse(successfulRetryStatusRaw, out long successfulRetryStatus) &&
+                        successfulRetryStatus > 0)
+                    {
+                        // all poison messages in this blob have been successfully retried
+                        // safe to ignore
+                        continue;
+                    }
+
+                    BlobClient blobClient = deadLetterClient.GetBlobClient(blob.Name);
+                    MemoryStream downloadStream = new MemoryStream();
+                    await blobClient.DownloadToAsync(downloadStream).ConfigureAwait(false);
+                    string blobContent = Encoding.UTF8.GetString(downloadStream.ToArray());
+
+                    int failedDocCount = Regex.Matches(blobContent, EnvironmentConfig.FailedDocSeperator).Count;
+                    if (!blob.Metadata.TryGetValue(
+                        EnvironmentConfig.DeadLetterMetaSuccessfulRetryCountKey,
+                        out string successfulRetryCountRaw) ||
+                        int.TryParse(successfulRetryCountRaw, out int successfulRetryCount))
+                    {
+                        successfulRetryCount = 0;
+                    }
+
+                    if (successfulRetryCount >= failedDocCount)
+                    {
+                        blob.Metadata[EnvironmentConfig.DeadLetterMetaDataSuccessfulRetryStatusKey] = "1";
+                        _ = await blobClient.SetMetadataAsync(
+                            blob.Metadata,
+                            new BlobRequestConditions
+                            {
+                                IfMatch = blob.Properties.ETag
+                            }).ConfigureAwait(false);
+
+                        TelemetryHelper.Singleton.LogInfo(
+                            "Marked SuccessfulRetryStatus for posion message blob '{0}'",
+                            blob.Name);
+
+                        continue;
+                    }
+
+                    string[] failureColumns = blobContent.Split(EnvironmentConfig.FailureColumnSeperator);
+                    if (failureColumns.Length != 3)
+                    {
+                        continue;
+                    }
+
+                    string[] failedDocs = failureColumns[1].Split(EnvironmentConfig.FailedDocSeperator);
+                    List<DocumentIdentifier> failedDocIdentities = new List<DocumentIdentifier>();
+                    foreach (string failedDocIdentifier in failedDocs)
+                    {
+                        failedDocIdentities.Add(DocumentIdentifier.FromString(failedDocIdentifier));
+                    }
+
+                    int successfullyMigratedCount = await this.changeFeedProcessorHosts[config.ProcessorName]
+                        .RetryDocumentMigrations(failedDocIdentities)
+                        .ConfigureAwait(false);
+
+                    blob.Metadata[EnvironmentConfig.DeadLetterMetaSuccessfulRetryCountKey] =
+                        successfullyMigratedCount.ToString(CultureInfo.InvariantCulture);
+
+                    if (successfulRetryCount >= failedDocCount)
+                    {
+                        blob.Metadata[EnvironmentConfig.DeadLetterMetaDataSuccessfulRetryStatusKey] = "1";
+                    }
+
+                    _ = await blobClient.SetMetadataAsync(
+                            blob.Metadata,
+                            new BlobRequestConditions
+                            {
+                                IfMatch = blob.Properties.ETag
+                            }).ConfigureAwait(false);
+
+                    TelemetryHelper.Singleton.LogInfo(
+                        "Updated metadata after retries for poison message blob '{0}' - " +
+                        "SuccessfulRetryStatus: {1}, SuccesfulRetryCount: {2}",
+                        blob.Name,
+                        blob.Metadata[EnvironmentConfig.DeadLetterMetaDataSuccessfulRetryStatusKey],
+                        blob.Metadata[EnvironmentConfig.DeadLetterMetaSuccessfulRetryCountKey]);
+                }
+            }
+            catch (Exception error)
+            {
+                TelemetryHelper.Singleton.LogWarning(
+                    "Failed to retry poison messages. Retrying on next iteration... Exception: {0}",
+                    error);
+            }
+            finally
+            {
+                this.retryConcurrencySemaphore.Release();
+            }
+        }
+
         public async Task RunAsync()
         {
             await Task.Yield();
@@ -93,7 +224,7 @@ namespace Migration.Executor.WebJob
                     if (configDocs.Count == 0)
                     {
                         TelemetryHelper.Singleton.LogInfo("No job for process: {0}", Process.GetCurrentProcess().Id);
-                        await Task.Delay(SleepTime);
+                        await Task.Delay(SleepTimeInMs);
                         continue;
                     }
 
@@ -108,7 +239,7 @@ namespace Migration.Executor.WebJob
 
                             ChangeFeedProcessorHost host = new ChangeFeedProcessorHost(config);
                             await host.StartAsync().ConfigureAwait(false);
-                            this.changeFeedProcessorHosts.Add(
+                            this.changeFeedProcessorHosts.TryAdd(
                                 config.ProcessorName,
                                 host);
                         }
@@ -124,11 +255,64 @@ namespace Migration.Executor.WebJob
 
                             // Migration has been completed for this processor
                             await this.changeFeedProcessorHosts[key].CloseAsync().ConfigureAwait(false);
-                            this.changeFeedProcessorHosts.Remove(key);
+                            this.changeFeedProcessorHosts.TryRemove(key, out ChangeFeedProcessorHost removeHost);
                         }
                     }
 
-                    await Task.Delay(SleepTime);
+                    List<Task> retryTasks = new List<Task>();
+
+                    foreach (MigrationConfig configToRetry in configDocs.Where(c => !c.Completed &&
+                         (String.IsNullOrWhiteSpace(c.LastPoisonMessageRetryId) ||
+                         c.LastPoisonMessageRetryStartedAt < c.PoisonMessageRetryRequestedAt - (long)TimeSpan.FromMinutes(15).TotalMilliseconds )))
+                    {
+                        configToRetry.LastPoisonMessageRetryId = Guid.NewGuid().ToString("N");
+                        configToRetry.LastPoisonMessageRetryStartedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+                        bool ownsRetryForConfig = false;
+                        try
+                        {
+                            await container.ReplaceItemAsync(
+                                configToRetry,
+                                configToRetry.Id,
+                                new PartitionKey(configToRetry.Id),
+                                new ItemRequestOptions
+                                {
+                                    IfMatchEtag = configToRetry.ETag
+                                }).ConfigureAwait(false);
+
+                            ownsRetryForConfig = true;
+                        }
+                        catch (CosmosException error) 
+                        {
+                            if (error.StatusCode == HttpStatusCode.PreconditionFailed ||
+                                error.StatusCode == HttpStatusCode.Conflict)
+                            {
+                                TelemetryHelper.Singleton.LogInfo(
+                                    "Taking ownership of retry failes for config '{0}' - Status Code: {1}",
+                                    configToRetry.Id,
+                                    error.StatusCode);
+                            }
+                            else
+                            {
+                                TelemetryHelper.Singleton.LogWarning(
+                                    "Taking ownership of retry failes for config '{0}' - Error: {1}",
+                                    configToRetry.Id,
+                                    error);
+                            }
+                        }
+
+                        if (ownsRetryForConfig)
+                        {
+                            retryTasks.Add(this.RetryPoisonMessages(configToRetry));
+                        }
+                    }
+
+                    if (retryTasks.Count > 0)
+                    {
+                        await Task.WhenAll(retryTasks).ConfigureAwait(false);
+                    }
+
+                    await Task.Delay(SleepTimeInMs);
                 }
             }
         }
