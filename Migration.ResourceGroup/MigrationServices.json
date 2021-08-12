@@ -293,11 +293,11 @@
           "metadata": [
             {
               "name": "CURRENT_STACK",
-              "value": "dotnetcore"
+              "value": "dotnet"
             }
           ],
           "alwaysOn": "true",
-          "netFrameworkVersion": ""
+          "netFrameworkVersion": "v5.0"
         },
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
         "clientAffinityEnabled": false,
@@ -424,11 +424,11 @@
           "metadata": [
             {
               "name": "CURRENT_STACK",
-              "value": "dotnetcore"
+              "value": "dotnet"
             }
           ],
           "alwaysOn": "true",
-          "netFrameworkVersion": ""
+          "netFrameworkVersion": "v5.0"
         },
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
         "clientAffinityEnabled": false,
