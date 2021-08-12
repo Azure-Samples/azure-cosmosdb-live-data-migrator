@@ -165,7 +165,7 @@ Click the button below:
 #### Known issues
 
 - ***IMPORTANT** –it looks like occasionally the ARM template can result in conflicts during the deployment – please attempt a retry (by clicking the Redeploy button and using the same values for the parameters) – this usually works.*
-- ***IMPORTANT** – in a couple of cases the migration-app shows an error “HTTP Error 500.30 - ANCM In-Process Start Failure” after the deployment. In this case it usually helps to toggle the “Runtime stack” (in the Settings/Configuration/General settings section of the <ResourceNamePrefix>-ui App Service resource between .Net and .Net Core (change the value, save and then change it back and save again). This seems to be related to some Windows Images only – will provide an update when this is better understood. But it is only necessary to do this once after finishing the deployment via the ARM template.*
+- ***IMPORTANT** – in a couple of cases the migration-app shows an error “HTTP Error 500.30 - ANCM In-Process Start Failure” after the deployment. In this case it usually helps to toggle the “Runtime stack” (in the Settings/Configuration/General settings section of the <ResourceNamePrefix>-ui App Service resource between .Net and .Net Core (change the value, save and then change it back and save again). This seems to be related to some Windows Images only – will provide an update when this is better understood. But it is only necessary to do this once after finishing the deployment via the ARM template.* This link can also help debugging root cause of this error in case the mitigation above fails: [HTTP Error 500.30 - ANCM In-Process Start Failure - Microsoft Q&A](https://docs.microsoft.com/en-us/answers/questions/38950/http-error-50030-ancm-in-process-start-failure.html)
 
 
 
@@ -242,5 +242,45 @@ Click the button below:
 
   - Log Streaming: Logging to the files system has been enabled for all three “App Service” resources. Go to the “Monitoring/Log Stream” section in any of the “App Service” resources to take a look at the real-time logs.
 
+### Building your own installation packages
+- When installing the ARM template the actual application binaries are installed from a publicly available share by default - but theses properties (`migrationAppPackage`, `exectuorWebJobPackage` and `monitorWebJobPackage`) can be overriden.
+- To build these application packages (ZIP files used to deploy to AppServices) follow these steps (the steps are identical for all three apps)
 
+  - Open Powershell terminal in the solution's root folder
 
+  - Create the installation package for the UI application
+
+  ```powershell
+  if (Test-Path $InstallationPackageTargetFolder\Migration.UI.WebApp.zip) {
+    del $InstallationPackageTargetFolder\Migration.UI.WebApp.zip 
+  }
+  cd Migration.UI.WebApp
+  dotnet publish
+  cd ..
+  Compress-Archive -Path Migration.UI.WebApp\bin\debug\net5.0\publish\* -DestinationPath $InstallationPackageTargetFolder\Migration.UI.WebApp.zip
+  
+  ```
+  
+  - Create the installation package for the Executor WebJob
+  ```powershell
+  if (Test-Path $InstallationPackageTargetFolder\Migration.Executor.WebJob.zip) {
+    del $InstallationPackageTargetFolder\Migration.Executor.WebJob.zip
+  }
+  cd Migration.Executor.WebJob
+  dotnet publish
+  cd ..
+  Compress-Archive -Path Migration.UI.WebApp\bin\debug\net5.0\publish\* -DestinationPath $InstallationPackageTargetFolder\Migration.Executor.WebJob.zip
+  
+  ```
+  
+  - Create the installation package for the Monitoring WebJob
+  ```powershell
+  if (Test-Path $InstallationPackageTargetFolder\Migration.Monitor.WebJob.zip) {
+    del $InstallationPackageTargetFolder\Migration.Monitor.WebJob.zip
+  }
+  cd Migration.Monitor.WebJob
+  dotnet publish
+  cd ..
+  Compress-Archive -Path Migration.UI.WebApp\bin\debug\net5.0\publish\* -DestinationPath $InstallationPackageTargetFolder\Migration.Monitor.WebJob.zip
+  
+  ```
