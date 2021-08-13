@@ -120,7 +120,7 @@ The Cosmos DB Live Data Migrator provides the following features:
 Click the button below:
 
 <br/>
-<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fgithub.com%2FFabianMeiswinkel%2Fazure-cosmosdb-live-data-migrator%2Fraw%2Fusers%2Ffabianm%2FRelease202109%2FMigration.ResourceGroup%2FMigrationServices.json" target="_blank">    <img src="https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true"/></a>
+<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FFabianMeiswinkel%2Fazure-cosmosdb-live-data-migrator%2Fusers%2Ffabianm%2FRelease202109%2FMigration.ResourceGroup%2FMigrationServices.json" target="_blank">    <img src="https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true"/></a>
 
 <br/>
 
