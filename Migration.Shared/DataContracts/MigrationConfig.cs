@@ -125,7 +125,7 @@ namespace Migration.Shared.DataContracts
                     this.SourcePartitionKeys,
                     "=='",
                     this.SourcePartitionKeyValueFilter,
-                    "'");
+                    "']");
             }
         }
 

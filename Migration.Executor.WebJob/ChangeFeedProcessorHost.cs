@@ -265,7 +265,7 @@ namespace Migration.Executor.WebJob
                 {
                     bulkOperations.Tasks.Add(this.containerToStoreDocuments.UpsertItemAsync(
                         item: document,
-                        cancellationToken: cancellationToken).CaptureOperationResponse(document, ignoreConflicts: true));
+                        cancellationToken: cancellationToken).CaptureOperationResponse(document, ignoreConflicts: false));
                 }
             }
 
@@ -302,13 +302,21 @@ namespace Migration.Executor.WebJob
                     }
                     catch (CosmosException notFound) when (notFound.StatusCode == HttpStatusCode.NotFound)
                     {
-                        // source docuemnt doesn't exist anymore - no need to worry about migration
+                        TelemetryHelper.Singleton.LogInfo(
+                            "Source document '{0}' doesn't exist anymore",
+                            failedDocIdentity.ToString());
+                        // source document doesn't exist anymore - no need to worry about migration
                         successfulRetries++;
                         continue;
                     }
 
                     if (sourceDoc.ETag != failedDocIdentity.Etag)
                     {
+                        TelemetryHelper.Singleton.LogInfo(
+                            "Document '{0}' has changed since the posion message was created - Original Etag '{1}' Etag now '{2}'",
+                            failedDocIdentity.ToString(),
+                            failedDocIdentity.Etag,
+                            sourceDoc.ETag);
                         // Document has changed since the posion message was created
                         // no need to worry about migration - the update in the source will
                         // be handled via separate change feed event

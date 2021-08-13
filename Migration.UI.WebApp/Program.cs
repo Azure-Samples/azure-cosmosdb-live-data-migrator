@@ -38,7 +38,7 @@ namespace Migration.UI.WebApp
                 _ = EnvironmentConfig.Singleton.TenantId;
                 _ = EnvironmentConfig.Singleton.AllowedUsers;
 
-                KeyVaultHelper.Initialize(new Uri(EnvironmentConfig.Singleton.KeyVaultUri), new DefaultAzureCredential());
+                KeyVaultHelper.Initialize(new DefaultAzureCredential());
 
                 using (CosmosClient client =
                     KeyVaultHelper.Singleton.CreateCosmosClientFromKeyVault(

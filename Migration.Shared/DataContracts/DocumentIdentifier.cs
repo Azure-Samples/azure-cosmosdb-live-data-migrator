@@ -38,7 +38,7 @@ namespace Migration.Shared.DataContracts
         {
             if (String.IsNullOrWhiteSpace(rawIdentifierString)) { throw new ArgumentNullException(nameof(rawIdentifierString)); }
 
-            if (!rawIdentifierString.StartsWith("PK="))
+            if (!rawIdentifierString.StartsWith("\"PK="))
             {
                 throw new ArgumentException(
                     String.Format(
@@ -72,9 +72,9 @@ namespace Migration.Shared.DataContracts
             }
 
             return new DocumentIdentifier(
-                rawIdentifierString[3..indexIDPrefix],
+                rawIdentifierString[4..indexIDPrefix],
                 rawIdentifierString[(indexIDPrefix + 4)..indexEtagPrefix],
-                rawIdentifierString[(indexEtagPrefix + 6)..rawIdentifierString.Length]);
+                rawIdentifierString[(indexEtagPrefix + 6)..(rawIdentifierString.Length - 1)]);
         }
     }
 }

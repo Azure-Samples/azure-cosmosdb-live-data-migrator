@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Globalization;
+using System.Threading.Tasks;
 using Azure.Core;
 using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
@@ -35,14 +37,39 @@ namespace Migration.Shared
             }
         }
 
-        public static void Initialize(Uri keyVaultUri, TokenCredential credential)
+        public static void Initialize(TokenCredential credential)
         {
-            if (keyVaultUri == null) { throw new ArgumentNullException(nameof(keyVaultUri)); }
             if (credential == null) { throw new ArgumentNullException(nameof(credential)); }
 
-            singletonInstance = new KeyVaultHelper(
-                new SecretClient(keyVaultUri, credential),
-                keyVaultUri.ToString());
+            for (int i = 0; i < 10; i++)
+            {
+                Uri keyVaultUri = new Uri(EnvironmentConfig.Singleton.KeyVaultUri);
+                try
+                {
+                    singletonInstance = new KeyVaultHelper(
+                        new SecretClient(keyVaultUri, credential),
+                        keyVaultUri.ToString());
+
+                    return;
+                }
+                catch (Exception error)
+                {
+                    string msg = String.Format(
+                                CultureInfo.InvariantCulture,
+                                "Can't initialize key value '{0}', Error: {1}",
+                                keyVaultUri,
+                                error);
+
+                    Console.WriteLine(msg);
+
+                    if (i == 9)
+                    {
+                        throw new InvalidOperationException(msg);
+                    }
+                }
+
+                Task.Delay(1000).Wait();
+            }
         }
 
         private string GetSecret(string name)

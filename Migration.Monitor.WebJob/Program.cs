@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -65,9 +66,7 @@ namespace Migration.Monitor.WebJob
 
             try
             {
-                KeyVaultHelper.Initialize(
-                    new Uri(EnvironmentConfig.Singleton.KeyVaultUri),
-                    new DefaultAzureCredential());
+                KeyVaultHelper.Initialize(new DefaultAzureCredential());
 
                 RunAsync().Wait();
             }
@@ -187,12 +186,14 @@ namespace Migration.Monitor.WebJob
 
         private static async Task<long> GetPoisonMessageCountAsync(BlobContainerClient deadLetterClient)
         {
+            TelemetryHelper.Singleton.LogInfo("--> GetPoisonMessageCountAsync {0}", deadLetterClient.Name);
             try
             {
                 AsyncPageable<BlobItem> blobsPagable = deadLetterClient.GetBlobsAsync(BlobTraits.All, BlobStates.None);
                 int poisonMessageCount = 0;
                 await foreach (BlobItem blob in blobsPagable.ConfigureAwait(false))
                 {
+                    TelemetryHelper.Singleton.LogInfo("... Blob {0}", blob.Name);
                     if (blob.Metadata.TryGetValue(
                         EnvironmentConfig.DeadLetterMetaDataSuccessfulRetryStatusKey,
                         out string successfulRetryStatusRaw) &&
@@ -201,19 +202,32 @@ namespace Migration.Monitor.WebJob
                     {
                         // all poison messages in this blob have been successfully retried
                         // safe to ignore
+                        TelemetryHelper.Singleton.LogInfo(
+                            "All poison messages in this blob have been successfully retried safe to ignore - Successful retries {0} - {1}",
+                            successfulRetryStatusRaw,
+                            successfulRetryStatus);
                         continue;
                     }
 
+                    TelemetryHelper.Singleton.LogInfo("Before GetBlobClient");
                     BlobClient blobClient = deadLetterClient.GetBlobClient(blob.Name);
                     MemoryStream downloadStream = new MemoryStream();
-                    await blobClient.DownloadToAsync(downloadStream).ConfigureAwait(false);
+                    TelemetryHelper.Singleton.LogInfo("Before Download");
+                    Response rsp = await blobClient.DownloadToAsync(downloadStream).ConfigureAwait(false);
+                    TelemetryHelper.Singleton.LogInfo("After Download {0}", rsp.Status);
                     string blobContent = Encoding.UTF8.GetString(downloadStream.ToArray());
 
-                    int failedDocCount = Regex.Matches(blobContent, EnvironmentConfig.FailedDocSeperator).Count;
+                    int failedDocCount = Regex.Matches(blobContent, EnvironmentConfig.FailedDocSeperator).Count + 1;
+
+                    TelemetryHelper.Singleton.LogInfo(
+                        "FailedDocCount: {0}, Blob: '{1}'",
+                        failedDocCount,
+                        blobContent);
+
                     if (!blob.Metadata.TryGetValue(
                         EnvironmentConfig.DeadLetterMetaSuccessfulRetryCountKey,
                         out string successfulRetryCountRaw) ||
-                        int.TryParse(successfulRetryCountRaw, out int successfulRetryCount))
+                        !int.TryParse(successfulRetryCountRaw, out int successfulRetryCount))
                     {
                         successfulRetryCount = 0;
                     }
@@ -236,6 +250,7 @@ namespace Migration.Monitor.WebJob
                     Interlocked.Add(ref poisonMessageCount, Math.Max(0, failedDocCount - successfulRetryCount));
                 }
 
+                TelemetryHelper.Singleton.LogInfo("<-- GetPoisonMessageCountAsync {0}", poisonMessageCount);
                 return poisonMessageCount;
             }
             catch (Exception error)
@@ -243,6 +258,8 @@ namespace Migration.Monitor.WebJob
                 TelemetryHelper.Singleton.LogWarning(
                     "Failed to get number of poison messages. Retrying on next iteration... Exception: {0}",
                     error);
+
+                TelemetryHelper.Singleton.LogInfo("<-- GetPoisonMessageCountAsync {0}", -1);
 
                 return -1;
             }
@@ -359,7 +376,12 @@ namespace Migration.Monitor.WebJob
             if (String.IsNullOrWhiteSpace(sourcePartitionKeyName)) { throw new ArgumentNullException(nameof(sourcePartitionKeyName)); }
             if (sourcePartitionKeyValue == null) { throw new ArgumentNullException(nameof(sourcePartitionKeyValue)); }
 
-            QueryDefinition queryDef = new QueryDefinition("SELECT VALUE COUNT(1) FROM c WHERE c.{0} == @pkValue")
+            QueryDefinition queryDef = new QueryDefinition(
+                String.Format(
+                    CultureInfo.InvariantCulture,
+                    "SELECT VALUE COUNT(1) FROM c WHERE c.{0} = @pkValue",
+                    sourcePartitionKeyName.StartsWith("/") ? 
+                            sourcePartitionKeyName[1..sourcePartitionKeyName.Length] : sourcePartitionKeyName))
                 .WithParameter("@pkValue", sourcePartitionKeyValue);
 
             QueryRequestOptions requestOptions = new QueryRequestOptions

@@ -62,9 +62,7 @@ namespace Migration.Executor.WebJob
 
             try
             {
-                KeyVaultHelper.Initialize(
-                    new Uri(EnvironmentConfig.Singleton.KeyVaultUri),
-                    new DefaultAzureCredential());
+                KeyVaultHelper.Initialize(new DefaultAzureCredential());
 
                 new Program().RunAsync().Wait();
             }
@@ -98,7 +96,6 @@ namespace Migration.Executor.WebJob
                 }
 
                 AsyncPageable<BlobItem> blobsPagable = deadLetterClient.GetBlobsAsync(BlobTraits.All, BlobStates.None);
-                int poisonMessageCount = 0;
                 await foreach (BlobItem blob in blobsPagable.ConfigureAwait(false))
                 {
                     if (blob.Metadata.TryGetValue(
@@ -117,11 +114,11 @@ namespace Migration.Executor.WebJob
                     await blobClient.DownloadToAsync(downloadStream).ConfigureAwait(false);
                     string blobContent = Encoding.UTF8.GetString(downloadStream.ToArray());
 
-                    int failedDocCount = Regex.Matches(blobContent, EnvironmentConfig.FailedDocSeperator).Count;
+                    int failedDocCount = Regex.Matches(blobContent, EnvironmentConfig.FailedDocSeperator).Count + 1;
                     if (!blob.Metadata.TryGetValue(
                         EnvironmentConfig.DeadLetterMetaSuccessfulRetryCountKey,
                         out string successfulRetryCountRaw) ||
-                        int.TryParse(successfulRetryCountRaw, out int successfulRetryCount))
+                        !int.TryParse(successfulRetryCountRaw, out int successfulRetryCount))
                     {
                         successfulRetryCount = 0;
                     }
@@ -137,8 +134,12 @@ namespace Migration.Executor.WebJob
                             }).ConfigureAwait(false);
 
                         TelemetryHelper.Singleton.LogInfo(
-                            "Marked SuccessfulRetryStatus for posion message blob '{0}'",
-                            blob.Name);
+                            "Updated metadata after retries for poison message blob '{0}' - " +
+                            "SuccessfulRetryStatus: {1}, FailedDocCount: {2}, SuccesfulRetryCount: {3}",
+                            blob.Name,
+                            blob.Metadata[EnvironmentConfig.DeadLetterMetaDataSuccessfulRetryStatusKey],
+                            failedDocCount,
+                            blob.Metadata[EnvironmentConfig.DeadLetterMetaSuccessfulRetryCountKey]);
 
                         continue;
                     }
@@ -149,7 +150,7 @@ namespace Migration.Executor.WebJob
                         continue;
                     }
 
-                    string[] failedDocs = failureColumns[1].Split(EnvironmentConfig.FailedDocSeperator);
+                    string[] failedDocs = failureColumns[2].Split(EnvironmentConfig.FailedDocSeperator);
                     List<DocumentIdentifier> failedDocIdentities = new List<DocumentIdentifier>();
                     foreach (string failedDocIdentifier in failedDocs)
                     {
@@ -177,9 +178,10 @@ namespace Migration.Executor.WebJob
 
                     TelemetryHelper.Singleton.LogInfo(
                         "Updated metadata after retries for poison message blob '{0}' - " +
-                        "SuccessfulRetryStatus: {1}, SuccesfulRetryCount: {2}",
+                        "SuccessfulRetryStatus: {1}, FailedDocCount: {2}, SuccesfulRetryCount: {3}",
                         blob.Name,
                         blob.Metadata[EnvironmentConfig.DeadLetterMetaDataSuccessfulRetryStatusKey],
+                        failedDocCount,
                         blob.Metadata[EnvironmentConfig.DeadLetterMetaSuccessfulRetryCountKey]);
                 }
             }
@@ -288,14 +290,14 @@ namespace Migration.Executor.WebJob
                                 error.StatusCode == HttpStatusCode.Conflict)
                             {
                                 TelemetryHelper.Singleton.LogInfo(
-                                    "Taking ownership of retry failes for config '{0}' - Status Code: {1}",
+                                    "Taking ownership of retry fails for config '{0}' - Status Code: {1}",
                                     configToRetry.Id,
                                     error.StatusCode);
                             }
                             else
                             {
                                 TelemetryHelper.Singleton.LogWarning(
-                                    "Taking ownership of retry failes for config '{0}' - Error: {1}",
+                                    "Taking ownership of retry fails for config '{0}' - Error: {1}",
                                     configToRetry.Id,
                                     error);
                             }
