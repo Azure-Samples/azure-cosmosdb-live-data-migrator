@@ -163,7 +163,8 @@
         "siteConfig": {
           "minTlsVersion": "1.2",
           "alwaysOn": "true",
-          "netFrameworkVersion": "v4.0"
+          "netFrameworkVersion": "v5.0",
+          "use32BitWorkerProcess": "false"
         },
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
         "clientAffinityEnabled": true,
@@ -297,7 +298,8 @@
             }
           ],
           "alwaysOn": "true",
-          "netFrameworkVersion": "v5.0"
+          "netFrameworkVersion": "v5.0",
+          "use32BitWorkerProcess": "false"
         },
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
         "clientAffinityEnabled": false,
@@ -428,7 +430,8 @@
             }
           ],
           "alwaysOn": "true",
-          "netFrameworkVersion": "v5.0"
+          "netFrameworkVersion": "v5.0",
+          "use32BitWorkerProcess": "false"
         },
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appserviceplanName'))]",
         "clientAffinityEnabled": false,
