@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <UserSecretsId>aspnet-Migration.UI.WebApp-B4E15B89-894D-44F4-8F6E-9F4EB2765B5E</UserSecretsId>
     <WebProject_DirectoryAccessLevelKey>0</WebProject_DirectoryAccessLevelKey>
     <CopyRefAssembliesToPublishDirectory>false</CopyRefAssembliesToPublishDirectory>
@@ -10,10 +10,8 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.4.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.AzureAD.UI" Version="5.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="5.0.8" />
-    <PackageReference Include="Microsoft.Identity.Web" Version="1.15.2" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="1.15.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.AzureAD.UI" Version="3.1.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="3.1.8" />
   </ItemGroup>
 
   <ItemGroup>
