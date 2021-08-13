@@ -114,7 +114,7 @@
   },
   "resources": [
     {
-      "apiVersion": "2020-06-01",
+      "apiVersion": "2020-12-01",
       "name": "[variables('appserviceplanName')]",
       "type": "Microsoft.Web/serverfarms",
       "location": "[variables('location')]",
@@ -145,7 +145,7 @@
       }
     },
     {
-      "apiVersion": "2020-06-01",
+      "apiVersion": "2020-12-01",
       "name": "[variables('migrationAppName')]",
       "type": "Microsoft.Web/sites",
       "location": "[variables('location')]",
@@ -175,7 +175,7 @@
       },
       "resources": [
         {
-          "apiVersion": "2020-06-01",
+          "apiVersion": "2020-12-01",
           "name": "appsettings",
           "type": "config",
           "dependsOn": [
@@ -215,7 +215,7 @@
         },
         {
           "type": "siteextensions",
-          "apiVersion": "2020-06-01",
+          "apiVersion": "2020-12-01",
           "name": "Microsoft.ApplicationInsights.AzureWebSites",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]",
@@ -225,7 +225,7 @@
         },
         {
           "type": "config",
-          "apiVersion": "2020-06-01",
+          "apiVersion": "2020-12-01",
           "name": "logs",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('migrationAppName'))]",
@@ -272,7 +272,7 @@
       ]
     },
     {
-      "apiVersion": "2020-06-01",
+      "apiVersion": "2020-12-01",
       "name": "[variables('monitorJobName')]",
       "type": "Microsoft.Web/sites",
       "location": "[variables('location')]",
@@ -309,7 +309,7 @@
       },
       "resources": [
         {
-          "apiVersion": "2020-06-01",
+          "apiVersion": "2020-12-01",
           "name": "appsettings",
           "type": "config",
           "dependsOn": [
@@ -342,7 +342,7 @@
         },
         {
           "type": "siteextensions",
-          "apiVersion": "2020-06-01",
+          "apiVersion": "2020-12-01",
           "name": "Microsoft.ApplicationInsights.AzureWebSites",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]",
@@ -355,7 +355,7 @@
         },
         {
           "type": "config",
-          "apiVersion": "2020-06-01",
+          "apiVersion": "2020-12-01",
           "name": "logs",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('monitorJobName'))]",
@@ -402,7 +402,7 @@
       ]
     },
     {
-      "apiVersion": "2020-06-01",
+      "apiVersion": "2020-12-01",
       "name": "[variables('executorJobName')]",
       "type": "Microsoft.Web/sites",
       "location": "[variables('location')]",
@@ -440,7 +440,7 @@
       },
       "resources": [
         {
-          "apiVersion": "2020-06-01",
+          "apiVersion": "2020-12-01",
           "name": "appsettings",
           "type": "config",
           "dependsOn": [
@@ -473,7 +473,7 @@
         },
         {
           "type": "siteextensions",
-          "apiVersion": "2020-06-01",
+          "apiVersion": "2020-12-01",
           "name": "Microsoft.ApplicationInsights.AzureWebSites",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]",
@@ -485,7 +485,7 @@
         },
         {
           "type": "config",
-          "apiVersion": "2020-06-01",
+          "apiVersion": "2020-12-01",
           "name": "logs",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('executorJobName'))]",
@@ -670,7 +670,7 @@
         "tenantId": "[variables('tenantId')]",
         "accessPolicies": [
           {
-            "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('migrationAppName')), '2020-06-01', 'full').identity.principalId]",
+            "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('migrationAppName')), '2020-12-01', 'full').identity.principalId]",
             "tenantId": "[variables('tenantId')]",
             "permissions": {
               "keys": [],
@@ -679,7 +679,7 @@
             }
           },
           {
-            "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('executorJobName')), '2020-06-01', 'full').identity.principalId]",
+            "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('executorJobName')), '2020-12-01', 'full').identity.principalId]",
             "tenantId": "[variables('tenantId')]",
             "permissions": {
               "keys": [],
@@ -688,7 +688,7 @@
             }
           },
           {
-            "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('monitorJobName')), '2020-06-01', 'full').identity.principalId]",
+            "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('monitorJobName')), '2020-12-01', 'full').identity.principalId]",
             "tenantId": "[variables('tenantId')]",
             "permissions": {
               "keys": [],
