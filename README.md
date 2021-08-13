@@ -286,4 +286,11 @@ Click the button below:
   cd ..
   Compress-Archive -Path Migration.UI.WebApp\bin\debug\netcoreapp3.1\publish\* -DestinationPath $InstallationPackageTargetFolder\Migration.Monitor.WebJob.zip
   
-  ```
+### Deploying updates directly from Dev Machine
+- The easiest way to deploy from my experience is to use the AppService FTP endpoint - here is a good [overview](https://docs.microsoft.com/en-us/azure/app-service/deploy-ftp)
+- Use the scripts above to publish to folders (dotnet clean/dotnet publish) for all three apps
+- Connect via FTP client (for example WinSCP) to the 3 apps (all in the same resource group)
+- For each app copy the output of the bin\debug\netcoreapp3.1\publish folder via the ftp link to the WebApp
+- IMPORTANT - for the UI Web App the right destination folder is just `/site/wwwroot` - for the two Webjobs the destination folder is `/site/wwwroot/App_Data/jobs/continous/Migration-Executor-Job/` or for the Monitor job `/site/wwwroot/App_Data/jobs/continous/Migration-Monitor-Job/`
+- IMPORTANT - when deploying the WebJobs the WebJobs need to be stopped - in the Tab `WebJobs` of the respective AppService resource for the WebJob then stop the Migration/Executor job
+
