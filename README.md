@@ -255,9 +255,10 @@ Click the button below:
     del $InstallationPackageTargetFolder\Migration.UI.WebApp.zip 
   }
   cd Migration.UI.WebApp
+  dotnet clean
   dotnet publish
   cd ..
-  Compress-Archive -Path Migration.UI.WebApp\bin\debug\net5.0\publish\* -DestinationPath $InstallationPackageTargetFolder\Migration.UI.WebApp.zip
+  Compress-Archive -Path Migration.UI.WebApp\bin\debug\netcoreapp3.1\publish\* -DestinationPath $InstallationPackageTargetFolder\Migration.UI.WebApp.zip
   
   ```
   
@@ -267,9 +268,10 @@ Click the button below:
     del $InstallationPackageTargetFolder\Migration.Executor.WebJob.zip
   }
   cd Migration.Executor.WebJob
+  dotnet clean
   dotnet publish
   cd ..
-  Compress-Archive -Path Migration.UI.WebApp\bin\debug\net5.0\publish\* -DestinationPath $InstallationPackageTargetFolder\Migration.Executor.WebJob.zip
+  Compress-Archive -Path Migration.UI.WebApp\bin\debug\netcoreapp3.1\publish\* -DestinationPath $InstallationPackageTargetFolder\Migration.Executor.WebJob.zip
   
   ```
   
@@ -279,8 +281,9 @@ Click the button below:
     del $InstallationPackageTargetFolder\Migration.Monitor.WebJob.zip
   }
   cd Migration.Monitor.WebJob
+  dotnet clean
   dotnet publish
   cd ..
-  Compress-Archive -Path Migration.UI.WebApp\bin\debug\net5.0\publish\* -DestinationPath $InstallationPackageTargetFolder\Migration.Monitor.WebJob.zip
+  Compress-Archive -Path Migration.UI.WebApp\bin\debug\netcoreapp3.1\publish\* -DestinationPath $InstallationPackageTargetFolder\Migration.Monitor.WebJob.zip
   
   ```
