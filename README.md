@@ -254,11 +254,22 @@ Click the button below:
   if (Test-Path $InstallationPackageTargetFolder\Migration.UI.WebApp.zip) {
     del $InstallationPackageTargetFolder\Migration.UI.WebApp.zip 
   }
+  if (Test-Path $InstallationPackageTargetFolder\Temp\Migration.UI.WebApp) {
+    del $InstallationPackageTargetFolder\Temp\Migration.UI.WebApp -Recurse
+  }
   cd Migration.UI.WebApp
   dotnet clean
-  dotnet publish
+  dotnet publish -c Release
   cd ..
-  Compress-Archive -Path Migration.UI.WebApp\bin\debug\netcoreapp3.1\publish\* -DestinationPath $InstallationPackageTargetFolder\Migration.UI.WebApp.zip
+  if (-not (Test-Path $InstallationPackageTargetFolder\Temp)) {
+    New-Item -Path $InstallationPackageTargetFolder -Name Temp -ItemType Directory
+  }
+  New-Item -Path $InstallationPackageTargetFolder\Temp -Name Migration.UI.WebApp -ItemType Directory
+  
+  Copy-Item -Path Migration.UI.WebApp\bin\release\netcoreapp3.1\publish\* -Destination $InstallationPackageTargetFolder\Temp\Migration.UI.WebApp -Recurse
+  
+  Compress-Archive -Path $InstallationPackageTargetFolder\Temp\Migration.UI.WebApp\* -DestinationPath $InstallationPackageTargetFolder\Migration.UI.WebApp.zip
+  
   
   ```
   
@@ -267,11 +278,27 @@ Click the button below:
   if (Test-Path $InstallationPackageTargetFolder\Migration.Executor.WebJob.zip) {
     del $InstallationPackageTargetFolder\Migration.Executor.WebJob.zip
   }
+  if (Test-Path $InstallationPackageTargetFolder\Temp\Migration.Executor.WebJob) {
+    del $InstallationPackageTargetFolder\Temp\Migration.Executor.WebJob -Recurse
+  }
+  
   cd Migration.Executor.WebJob
   dotnet clean
-  dotnet publish
+  dotnet publish -c Release
   cd ..
-  Compress-Archive -Path Migration.UI.WebApp\bin\debug\netcoreapp3.1\publish\* -DestinationPath $InstallationPackageTargetFolder\Migration.Executor.WebJob.zip
+  if (-not (Test-Path $InstallationPackageTargetFolder\Temp)) {
+    New-Item -Path $InstallationPackageTargetFolder -Name Temp -ItemType Directory
+  }
+  New-Item -Path $InstallationPackageTargetFolder\Temp -Name Migration.Executor.WebJob -ItemType Directory
+  New-Item -Path $InstallationPackageTargetFolder\Temp\Migration.Executor.WebJob -Name App_Data -ItemType Directory
+  New-Item -Path $InstallationPackageTargetFolder\Temp\Migration.Executor.WebJob\App_Data -Name jobs -ItemType Directory
+  New-Item -Path $InstallationPackageTargetFolder\Temp\Migration.Executor.WebJob\App_Data\jobs -Name continuous -ItemType Directory
+  New-Item -Path $InstallationPackageTargetFolder\Temp\Migration.Executor.WebJob\App_Data\jobs\continuous -Name Migration-Executor-Job -ItemType Directory
+  
+  Copy-Item -Path Migration.Executor.WebJob\bin\release\netcoreapp3.1\publish\* -Destination $InstallationPackageTargetFolder\Temp\Migration.Executor.WebJob\App_Data\jobs\continuous\Migration-Executor-Job -Recurse
+  
+  Compress-Archive -Path $InstallationPackageTargetFolder\Temp\Migration.Executor.WebJob\* -DestinationPath $InstallationPackageTargetFolder\Migration.Executor.WebJob.zip
+  
   
   ```
   
@@ -280,11 +307,27 @@ Click the button below:
   if (Test-Path $InstallationPackageTargetFolder\Migration.Monitor.WebJob.zip) {
     del $InstallationPackageTargetFolder\Migration.Monitor.WebJob.zip
   }
+  if (Test-Path $InstallationPackageTargetFolder\Temp\Migration.Monitor.WebJob) {
+    del $InstallationPackageTargetFolder\Temp\Migration.Monitor.WebJob -Recurse
+  }
+  
   cd Migration.Monitor.WebJob
   dotnet clean
-  dotnet publish
+  dotnet publish -c Release
   cd ..
-  Compress-Archive -Path Migration.UI.WebApp\bin\debug\netcoreapp3.1\publish\* -DestinationPath $InstallationPackageTargetFolder\Migration.Monitor.WebJob.zip
+  if (-not (Test-Path $InstallationPackageTargetFolder\Temp)) {
+    New-Item -Path $InstallationPackageTargetFolder -Name Temp -ItemType Directory
+  }
+  New-Item -Path $InstallationPackageTargetFolder\Temp -Name Migration.Monitor.WebJob -ItemType Directory
+  New-Item -Path $InstallationPackageTargetFolder\Temp\Migration.Monitor.WebJob -Name App_Data -ItemType Directory
+  New-Item -Path $InstallationPackageTargetFolder\Temp\Migration.Monitor.WebJob\App_Data -Name jobs -ItemType Directory
+  New-Item -Path $InstallationPackageTargetFolder\Temp\Migration.Monitor.WebJob\App_Data\jobs -Name continuous -ItemType Directory
+  New-Item -Path $InstallationPackageTargetFolder\Temp\Migration.Monitor.WebJob\App_Data\jobs\continuous -Name Migration-Monitor-Job -ItemType Directory
+  
+  Copy-Item -Path Migration.Monitor.WebJob\bin\release\netcoreapp3.1\publish\* -Destination $InstallationPackageTargetFolder\Temp\Migration.Monitor.WebJob\App_Data\jobs\continuous\Migration-Monitor-Job -Recurse
+  
+  Compress-Archive -Path $InstallationPackageTargetFolder\Temp\Migration.Monitor.WebJob\* -DestinationPath $InstallationPackageTargetFolder\Migration.Monitor.WebJob.zip
+  
   
 ### Deploying updates directly from Dev Machine
 - The easiest way to deploy from my experience is to use the AppService FTP endpoint - here is a good [overview](https://docs.microsoft.com/en-us/azure/app-service/deploy-ftp)
