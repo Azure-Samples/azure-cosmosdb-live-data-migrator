@@ -268,7 +268,9 @@ Click the button below:
   
   Copy-Item -Path Migration.UI.WebApp\bin\release\netcoreapp3.1\publish\* -Destination $InstallationPackageTargetFolder\Temp\Migration.UI.WebApp -Recurse
   
-  Compress-Archive -Path $InstallationPackageTargetFolder\Temp\Migration.UI.WebApp\* -DestinationPath $InstallationPackageTargetFolder\Migration.UI.WebApp.zip
+  # NOTE - there is a known issue with MSDeploy related to zip fiels created via the Compress-Archive
+  # cmdlet - as a workaround zip the $InstallationPackageTargetFolder\Temp\Migration.UI.WebApp folder manually please
+  #Compress-Archive -Path $InstallationPackageTargetFolder\Temp\Migration.UI.WebApp\* -DestinationPath $InstallationPackageTargetFolder\Migration.UI.WebApp.zip
   
   
   ```
@@ -297,7 +299,9 @@ Click the button below:
   
   Copy-Item -Path Migration.Executor.WebJob\bin\release\netcoreapp3.1\publish\* -Destination $InstallationPackageTargetFolder\Temp\Migration.Executor.WebJob\App_Data\jobs\continuous\Migration-Executor-Job -Recurse
   
-  Compress-Archive -Path $InstallationPackageTargetFolder\Temp\Migration.Executor.WebJob\* -DestinationPath $InstallationPackageTargetFolder\Migration.Executor.WebJob.zip
+  # NOTE - there is a known issue with MSDeploy related to zip fiels created via the Compress-Archive
+  # cmdlet - as a workaround zip the $InstallationPackageTargetFolder\Temp\Migration.Executor.WebJob folder manually please
+  #Compress-Archive -Path $InstallationPackageTargetFolder\Temp\Migration.Executor.WebJob\* -DestinationPath $InstallationPackageTargetFolder\Migration.Executor.WebJob.zip
   
   
   ```
@@ -326,7 +330,9 @@ Click the button below:
   
   Copy-Item -Path Migration.Monitor.WebJob\bin\release\netcoreapp3.1\publish\* -Destination $InstallationPackageTargetFolder\Temp\Migration.Monitor.WebJob\App_Data\jobs\continuous\Migration-Monitor-Job -Recurse
   
-  Compress-Archive -Path $InstallationPackageTargetFolder\Temp\Migration.Monitor.WebJob\* -DestinationPath $InstallationPackageTargetFolder\Migration.Monitor.WebJob.zip
+  # NOTE - there is a known issue with MSDeploy related to zip fiels created via the Compress-Archive
+  # cmdlet - as a workaround zip the $InstallationPackageTargetFolder\Temp\Migration.Monitor.WebJob folder manually please
+  #Compress-Archive -Path $InstallationPackageTargetFolder\Temp\Migration.Monitor.WebJob\* -DestinationPath $InstallationPackageTargetFolder\Migration.Monitor.WebJob.zip
   
   
 ### Deploying updates directly from Dev Machine
