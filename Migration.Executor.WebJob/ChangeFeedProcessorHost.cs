@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Runtime.Serialization.Json;
 using System.Text;
@@ -33,6 +32,7 @@ namespace Migration.Executor.WebJob
         private readonly MigrationConfig config;
         private ChangeFeedProcessor changeFeedProcessor;
         private Container containerToStoreDocuments;
+        private readonly bool isClientEncrypted = false;
 
         public ChangeFeedProcessorHost(MigrationConfig config)
         {
@@ -50,14 +50,16 @@ namespace Migration.Executor.WebJob
                     config.MonitoredAccount,
                     Program.SourceClientUserAgentPrefix,
                     useBulk: false,
-                    retryOn429Forever: true);
+                    retryOn429Forever: true,
+                    encryptedClient: config.Reencryption);
 
             this.destinationCollectionClient = KeyVaultHelper.Singleton.CreateCosmosClientFromKeyVault(
                     config.DestAccount,
                     Program.DestinationClientUserAgentPrefix,
                     useBulk: true,
-                    retryOn429Forever: true);
-
+                    retryOn429Forever: true,
+                    encryptedClient: config.Reencryption);
+                        
             this.deadletterClient = KeyVaultHelper.Singleton.GetBlobContainerClientFromKeyVault(
                 EnvironmentConfig.Singleton.DeadLetterAccountName,
                 config.Id?.ToLowerInvariant().Replace("-", String.Empty));
@@ -65,6 +67,8 @@ namespace Migration.Executor.WebJob
             // Make sure to allow multiple active migrations for the same source container
             // by creating a unique processor name for every config document
             this.processorName = config.ProcessorName;
+            
+            this.isClientEncrypted = config.Reencryption;
         }
 
         public async Task StartAsync()
@@ -181,10 +185,9 @@ namespace Migration.Executor.WebJob
             this.changeFeedProcessor = this.sourceCollectionClient.GetContainer(this.config.MonitoredDbName, this.config.MonitoredCollectionName)
                 .GetChangeFeedProcessorBuilder<DocumentMetadata>(this.processorName, this.ProcessChangesAsync)
                 .WithInstanceName(hostName)
-                .WithLeaseContainer(
-                    this.leaseCollectionClient.GetContainer(
-                        EnvironmentConfig.Singleton.MigrationMetadataDatabaseName,
-                        EnvironmentConfig.Singleton.MigrationLeasesContainerName))
+                .WithLeaseContainer(this.leaseCollectionClient.GetContainer(
+                    EnvironmentConfig.Singleton.MigrationMetadataDatabaseName,
+                    EnvironmentConfig.Singleton.MigrationLeasesContainerName))
                 .WithLeaseConfiguration(TimeSpan.FromSeconds(30))
                 .WithStartTime(starttime)
                 .WithMaxItems(1000)
@@ -194,6 +197,7 @@ namespace Migration.Executor.WebJob
                 "Starting changefeed processor '{0}' on host '{1}'",
                 this.processorName,
                 hostName);
+
             await this.changeFeedProcessor.StartAsync().ConfigureAwait(false);
 
             return this.changeFeedProcessor;
@@ -207,10 +211,17 @@ namespace Migration.Executor.WebJob
                 Boolean isNestedAttribute = this.SourcePartitionKeys.Contains("/");
                 Container targetContainer = this.destinationCollectionClient.GetContainer(this.config.DestDbName, this.config.DestCollectionName);
                 this.containerToStoreDocuments = targetContainer;
+                PartitionKey? partitionKey = null;
+
                 DocumentMetadata document;
                 BulkOperations<DocumentMetadata> bulkOperations = new BulkOperations<DocumentMetadata>(docs.Count);
                 foreach (DocumentMetadata doc in docs)
                 {
+                    if (this.isClientEncrypted)
+                    {
+                        partitionKey = new PartitionKey(doc.GetPropertyValue<string>(this.TargetPartitionKey));
+                    }
+
                     document = (this.SourcePartitionKeys != null & this.TargetPartitionKey != null) ?
                         MapPartitionKey(doc, isSyntheticKey, this.TargetPartitionKey, isNestedAttribute, this.SourcePartitionKeys) :
                         document = doc;
@@ -218,12 +229,14 @@ namespace Migration.Executor.WebJob
                     {
                         bulkOperations.Tasks.Add(this.containerToStoreDocuments.CreateItemAsync(
                             item: document,
+                            partitionKey,
                             cancellationToken: cancellationToken).CaptureOperationResponse(document, ignoreConflicts: true));
                     }
                     else
                     {
                         bulkOperations.Tasks.Add(this.containerToStoreDocuments.UpsertItemAsync(
                             item: document,
+                            partitionKey,
                             cancellationToken: cancellationToken).CaptureOperationResponse(document, ignoreConflicts: true));
                     }
                 }

@@ -39,6 +39,9 @@ namespace Migration.Shared.DataContracts
         [JsonProperty("onlyInsertMissingItems")]
         public bool OnlyInsertMissingItems { get; set; }
 
+        [JsonProperty("reencryption")]
+        public bool Reencryption { get; set; }
+
         [JsonProperty("id")]
         public string Id { get; set; }
 

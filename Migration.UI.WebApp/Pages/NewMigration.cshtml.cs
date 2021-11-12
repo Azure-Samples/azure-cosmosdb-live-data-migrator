@@ -18,7 +18,8 @@ namespace Migration.UI.WebApp.Pages
             string destinationDatabase,
             string destinationContainer,
             string destinationPK,
-            bool onlyMissingDocuments)
+            bool onlyMissingDocuments,
+            bool reencryption)
         {
             MigrationConfig newConfig = new MigrationConfig
             {
@@ -34,6 +35,7 @@ namespace Migration.UI.WebApp.Pages
                 Completed = false,
                 StartTimeEpochMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 OnlyInsertMissingItems = onlyMissingDocuments,
+                Reencryption = reencryption,
             };
 
             await MigrationConfigDal.Singleton

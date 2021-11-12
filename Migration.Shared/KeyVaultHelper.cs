@@ -1,8 +1,11 @@
 ﻿using System;
 using Azure.Core;
+using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Azure.Cosmos.Encryption;
+using Microsoft.Data.Encryption.AzureKeyVaultProvider;
 
 namespace Migration.Shared
 {
@@ -69,7 +72,8 @@ namespace Migration.Shared
             string accountName,
             string userAgentPrefix,
             bool useBulk,
-            bool retryOn429Forever)
+            bool retryOn429Forever,
+            bool encryptedClient = false)
         {
             if (String.IsNullOrWhiteSpace(accountName)) { throw new ArgumentNullException(nameof(accountName)); }
 
@@ -89,9 +93,20 @@ namespace Migration.Shared
                 options.ApplicationName = userAgentPrefix;
             }
 
-            string connectionString = KeyVaultHelper.Singleton.GetSecret(accountName + CosmosConnectionStringSecretNameSuffix);
+            string connectionString = KeyVaultHelper.Singleton.GetSecret(accountName + CosmosConnectionStringSecretNameSuffix);            
 
-            return new CosmosClient(connectionString, options);
+            CosmosClient cosmosClient= new CosmosClient(connectionString, options);            
+
+            if (encryptedClient)
+            {
+                AzureKeyVaultKeyStoreProvider azureKeyVaultKeyStoreProvider = new AzureKeyVaultKeyStoreProvider(new DefaultAzureCredential());
+                return cosmosClient.WithEncryption(azureKeyVaultKeyStoreProvider);
+            }
+            else
+            {
+                return cosmosClient;
+            }
+
         }
 
         public BlobContainerClient GetBlobContainerClientFromKeyVault(
