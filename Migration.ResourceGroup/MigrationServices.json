@@ -57,7 +57,7 @@
         "description": "The full path tot he zip-package containing the deployment package for the Migration UI App"
       }
     },
-    "exectuorWebJobPackage": {
+    "executorWebJobPackage": {
       "type": "string",
       "defaultValue": "https://fabianmstorage.blob.core.windows.net/migration-tool/2021-02-11_0001/Migration.Executor.WebJob.zip",
       "minLength": 3,
@@ -524,7 +524,7 @@
             "displayName": "Migration-Executor-WebJob"
           },
           "properties": {
-            "packageUri": "[parameters('exectuorWebJobPackage')]",
+            "packageUri": "[parameters('executorWebJobPackage')]",
             "dbType": "None",
             "connectionString": ""
           }
