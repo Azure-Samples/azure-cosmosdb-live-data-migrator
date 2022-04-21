@@ -92,7 +92,7 @@ namespace Migration.Shared.DataContracts
         public string SelfLink
         {
             get => this.GetValue<string>("_self");
-            internal set => this.SetValue("_self", value);
+            set => this.SetValue("_self", value);
         }
 
         /// <summary>
@@ -117,7 +117,7 @@ namespace Migration.Shared.DataContracts
             get =>
                 // Add seconds to the unix start time
                 UnixStartTime.AddSeconds(this.GetValue<double>("_ts"));
-            internal set => this.SetValue("_ts", (ulong)(value - UnixStartTime).TotalSeconds);
+            set => this.SetValue("_ts", (ulong)(value - UnixStartTime).TotalSeconds);
         }
 
         /// <summary>
@@ -133,7 +133,7 @@ namespace Migration.Shared.DataContracts
         public string ETag
         {
             get => this.GetValue<string>("_etag");
-            internal set => this.SetValue("_etag", value);
+            set => this.SetValue("_etag", value);
         }
 
         /// <summary>
