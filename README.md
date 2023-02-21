@@ -1,3 +1,5 @@
+**This repository is no longer maintained**. For live container migrations, we recommend [this sample](https://aka.ms/JavaCosmosSparkContainerMigration) using the Spark Connector for Azure Cosmos DB.
+
 # Azure Cosmos DB Live Data Migrator
 Simple and reliable service to transfer data from one Cosmos DB SQL API container to another in a live fashion.
 
